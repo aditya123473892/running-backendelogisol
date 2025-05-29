@@ -11,7 +11,7 @@ const app = express();
 // CORS configuration - place this before routes
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://your-production-frontend-domain.com"],
+    origin: ["http://localhost:3000", "https://elogisol-d7em.vercel.app"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
