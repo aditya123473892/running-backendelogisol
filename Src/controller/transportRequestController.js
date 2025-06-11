@@ -22,6 +22,7 @@ exports.createRequest = async (req, res) => {
       expected_pickup_date,
       expected_delivery_date,
       requested_price,
+      no_of_vehicles,
       status,
     } = req.body;
 
@@ -80,6 +81,7 @@ exports.createRequest = async (req, res) => {
         new Date(expected_delivery_date)
       )
       .input("requested_price", sql.Decimal(10, 2), requested_price)
+      .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
       .input("status", sql.NVarChar, status || "Pending").query(`
         INSERT INTO transport_requests (
           customer_id, vehicle_type, vehicle_size, consignee, consigner,
@@ -87,7 +89,7 @@ exports.createRequest = async (req, res) => {
           pickup_location, stuffing_location, delivery_location,
           commodity, cargo_type, cargo_weight, service_type,
           service_prices, expected_pickup_date, expected_delivery_date,
-          requested_price, status, created_at
+          requested_price, status, no_of_vehicles, created_at
         )
         OUTPUT INSERTED.*
         VALUES (
@@ -96,7 +98,7 @@ exports.createRequest = async (req, res) => {
           @pickup_location, @stuffing_location, @delivery_location,
           @commodity, @cargo_type, @cargo_weight, @service_type,
           @service_prices, @expected_pickup_date, @expected_delivery_date,
-          @requested_price, @status, GETDATE()
+          @requested_price, @status, @no_of_vehicles, GETDATE()
         )
       `);
 
@@ -137,6 +139,7 @@ exports.updateRequest = async (req, res) => {
       expected_pickup_date,
       expected_delivery_date,
       requested_price,
+      no_of_vehicles,
       status,
     } = req.body;
 
@@ -189,6 +192,7 @@ exports.updateRequest = async (req, res) => {
       .input("expected_pickup_date", sql.Date, expected_pickup_date)
       .input("expected_delivery_date", sql.Date, expected_delivery_date)
       .input("requested_price", sql.Decimal(10, 2), requested_price)
+      .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
       .input("status", sql.NVarChar, status).query(`
         UPDATE transport_requests 
         SET consignee = @consignee,
@@ -210,6 +214,7 @@ exports.updateRequest = async (req, res) => {
             expected_delivery_date = @expected_delivery_date,
             requested_price = @requested_price,
             status = @status,
+            no_of_vehicles = @no_of_vehicles,
             updated_at = GETDATE()
         WHERE id = @id
       `);
