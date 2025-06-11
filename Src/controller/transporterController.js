@@ -94,6 +94,7 @@ class TransporterController {
     try {
       const { id } = req.params;
       const {
+        transport_request_id,
         transporter_name,
         vehicle_number,
         driver_name,
@@ -102,28 +103,30 @@ class TransporterController {
         license_expiry,
         base_charge,
         additional_charges,
+        service_charges, // Add this to accept service charges
+        total_charge,
         container_no,
         line,
         seal_no,
         number_of_containers,
-        // vehicle_sequence removed
       } = req.body;
 
       // Update transporter details using model
       const result = await transporterModel.updateTransporter(id, {
         transporter_name,
-        vehicle_number,
-        driver_name,
-        driver_contact,
-        license_number,
-        license_expiry,
-        base_charge,
-        additional_charges,
-        container_no,
-        line,
-        seal_no,
-        number_of_containers,
-        
+          vehicle_number,
+          driver_name,
+          driver_contact,
+          license_number,
+          license_expiry,
+          base_charge,
+          additional_charges,
+          service_charges, // Pass service charges to model
+          total_charge,
+          container_no,
+          line,
+          seal_no,
+          number_of_containers,
       });
 
       if (!result) {
