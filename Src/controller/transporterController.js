@@ -109,6 +109,12 @@ class TransporterController {
         line,
         seal_no,
         number_of_containers,
+        seal1,                 // Add this
+        seal2,                 // Add this
+        container_total_weight, // Add this
+        cargo_total_weight,    // Add this
+        container_type,        // Add this
+        container_size         // Add this
       } = req.body;
 
       // Update transporter details using model
@@ -127,6 +133,12 @@ class TransporterController {
           line,
           seal_no,
           number_of_containers,
+          seal1,                 // Add this
+        seal2,                 // Add this
+        container_total_weight, // Add this
+        cargo_total_weight,    // Add this
+        container_type,        // Add this
+        container_size         // Add this
       });
 
       if (!result) {

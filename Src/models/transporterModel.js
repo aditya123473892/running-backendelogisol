@@ -36,6 +36,7 @@ const {
   line,
   seal_no,
   number_of_containers,
+  
 } = transporterData;
 
 const result = await pool
