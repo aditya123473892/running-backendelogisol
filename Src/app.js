@@ -4,7 +4,7 @@ const cors = require("cors");
 const { connectDB } = require("./config/dbconfig");
 
 // Load environment variables
-require("dotenv").config({ path: path.join(__dirname, "../.env") });
+require("dotenv").config({ path: path.join(__dirname, "../env") });
 
 const app = express();
 
@@ -31,13 +31,19 @@ const UserRoutes = require("./routes/UserRoutes");
 const transportRequestRoutes = require("./routes/transportRequestRoutes");
 const transporterRoutes = require("./routes/transporterdetailsroutes");
 const CustomerMasterRoutes = require("./routes/customermasterroutes");
+const transactionRoutes = require("./routes/transactionRoutes"); // Add t
+const transportlistroutes = require("./routes/transporterlistroutes"); // Add this line
+const serviceroutes = require("./routes/serviceroutes"); // Add this line
 
 // Mount routes with more specific routes first
 app.use("/api/auth", authRoutes);
-app.use("/api/users", UserRoutes); // Change this from "/api/user" to "/api/users"
+app.use("/api/users", UserRoutes);
 app.use("/api/transport-requests", transportRequestRoutes);
-app.use("/api", transporterRoutes); // Change this from "/api/transporter" to "/api"
-app.use("/api/customers", CustomerMasterRoutes); // Change this from "/api/customer" to "/api/customers"
+app.use("/api", transporterRoutes);
+app.use("/api/customers", CustomerMasterRoutes);
+app.use("/api/transactions", transactionRoutes); // Add this line
+app.use("/api/transporterlist", transportlistroutes); // Add this line
+app.use("/api/services", serviceroutes); // Add this line
 
 // Add route not found handler
 app.use((req, res, next) => {

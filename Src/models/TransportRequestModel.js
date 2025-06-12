@@ -21,7 +21,7 @@ class TransportRequest {
         total_containers,
         expected_pickup_date,
         expected_delivery_date,
-        requested_price,
+
         status,
         customerId,
       } = requestData;
@@ -62,7 +62,7 @@ class TransportRequest {
             pickup_location, stuffing_location, delivery_location,
             commodity, cargo_type, cargo_weight, service_type,
             service_prices, expected_pickup_date, expected_delivery_date,
-            requested_price, status, created_at
+           status, created_at
           )
           VALUES (
             @customerId, @vehicle_type, @vehicle_size, @consignee, @consigner,
@@ -83,124 +83,43 @@ class TransportRequest {
 
   static async getCustomerRequests(customerId) {
     try {
-      await pool.connect();
       const result = await pool
         .request()
         .input("customerId", sql.Int, customerId).query(`
           SELECT 
-            id,
-            customer_id,
-            vehicle_type,
-            vehicle_size,
-            consignee,
-            consigner,
-            containers_20ft,
-            containers_40ft,
-            total_containers,
-            pickup_location,
-            stuffing_location,
-            delivery_location,
-            commodity,
-            cargo_type,
-            cargo_weight,
-            service_type,
-            service_prices,
-            expected_pickup_date,
-            expected_delivery_date,
-            requested_price,
-            status,
-            admin_comment,
-            created_at,
-            updated_at
-          FROM transport_requests 
-          WHERE customer_id = @customerId 
-          ORDER BY created_at DESC
+            tr.*,
+            CONVERT(varchar, tr.created_at, 120) as request_created_at,
+            CONVERT(varchar, tr.updated_at, 120) as request_updated_at,
+            CONVERT(varchar, tr.expected_pickup_date, 23) as formatted_pickup_date,
+            CONVERT(varchar, tr.expected_delivery_date, 23) as formatted_delivery_date
+          FROM transport_requests tr
+          WHERE tr.customer_id = @customerId
+          ORDER BY tr.created_at DESC
         `);
-
-      // Transform the data to match frontend expectations
-      const transformedResult = result.recordset.map((record) => ({
-        ...record,
-        service_type:
-          typeof record.service_type === "string"
-            ? JSON.parse(record.service_type)
-            : record.service_type,
-        service_prices:
-          typeof record.service_prices === "string"
-            ? JSON.parse(record.service_prices)
-            : record.service_prices,
-        expected_pickup_date: record.expected_pickup_date
-          ? new Date(record.expected_pickup_date).toISOString().split("T")[0]
-          : null,
-        expected_delivery_date: record.expected_delivery_date
-          ? new Date(record.expected_delivery_date).toISOString().split("T")[0]
-          : null,
-      }));
-
-      return transformedResult;
+      return result.recordset;
     } catch (error) {
-      console.error("Get customer requests error:", error);
       throw error;
     }
   }
 
   static async getAllRequests() {
     try {
-      await pool.connect();
       const result = await pool.request().query(`
         SELECT 
-          tr.id,
-          tr.customer_id,
-          tr.vehicle_type,
-          tr.vehicle_size,
-          tr.consignee,
-          tr.consigner,
-          tr.containers_20ft,
-          tr.containers_40ft,
-          tr.total_containers,
-          tr.pickup_location,
-          tr.stuffing_location,
-          tr.delivery_location,
-          tr.commodity,
-          tr.cargo_type,
-          tr.cargo_weight,
-          tr.service_type,
-          tr.service_prices,
-          tr.expected_pickup_date,
-          tr.expected_delivery_date,
-          tr.requested_price,
-          tr.status,
-          tr.admin_comment,
-          tr.created_at,
-          tr.updated_at,
-          u.name as customer_name, 
-          u.email as customer_email
+          tr.*,
+          CONVERT(varchar, tr.created_at, 120) as request_created_at,
+          CONVERT(varchar, tr.updated_at, 120) as request_updated_at,
+          CONVERT(varchar, tr.expected_pickup_date, 23) as formatted_pickup_date,
+          CONVERT(varchar, tr.expected_delivery_date, 23) as formatted_delivery_date,
+          u.name as customer_name,
+          u.email as customer_email,
+          u.created_at as user_created_at
         FROM transport_requests tr
-        INNER JOIN users u ON tr.customer_id = u.id
+        LEFT JOIN users u ON tr.customer_id = u.id
         ORDER BY tr.created_at DESC
       `);
-
-      // Transform the data for consistency
-      const transformedResult = result.recordset.map((record) => ({
-        ...record,
-        service_type:
-          typeof record.service_type === "string"
-            ? JSON.parse(record.service_type)
-            : record.service_type,
-        service_prices:
-          typeof record.service_prices === "string"
-            ? JSON.parse(record.service_prices)
-            : record.service_prices,
-        expected_pickup_date: record.expected_pickup_date
-          ? new Date(record.expected_pickup_date).toISOString().split("T")[0]
-          : null,
-        expected_delivery_date: record.expected_delivery_date
-          ? new Date(record.expected_delivery_date).toISOString().split("T")[0]
-          : null,
-      }));
-
-      return transformedResult;
+      return result.recordset;
     } catch (error) {
-      console.error("Get all requests error:", error);
       throw error;
     }
   }
@@ -250,7 +169,7 @@ class TransportRequest {
         total_containers,
         expected_pickup_date,
         expected_delivery_date,
-        requested_price,
+
         customerId,
       } = requestData;
 
