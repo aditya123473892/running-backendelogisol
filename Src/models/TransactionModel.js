@@ -129,6 +129,7 @@ class TransactionModel {
   }
 
   // Update transaction payment
+  // Update transaction payment
   static async updatePayment(id, paymentData) {
     try {
       const {
@@ -137,20 +138,20 @@ class TransactionModel {
         payment_date,
         remarks
       } = paymentData;
-
+  
       // First get the current transaction to calculate new total_paid
       const currentTransaction = await pool
         .request()
         .input("id", sql.Int, id)
         .query("SELECT total_paid FROM transport_transaction_master WHERE id = @id");
-
+  
       if (currentTransaction.recordset.length === 0) {
         throw new Error("Transaction not found");
       }
-
+  
       const currentTotalPaid = parseFloat(currentTransaction.recordset[0].total_paid);
       const newTotalPaid = currentTotalPaid + parseFloat(payment_amount);
-
+  
       // Update the transaction with new payment info
       const result = await pool
         .request()
@@ -172,7 +173,7 @@ class TransactionModel {
           OUTPUT INSERTED.*
           WHERE id = @id
         `);
-
+  
       return result.recordset[0];
     } catch (error) {
       console.error("Update transaction payment error:", error);

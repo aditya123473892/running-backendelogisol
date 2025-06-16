@@ -1,5 +1,6 @@
 const { pool, sql } = require("../config/dbconfig");
 const TransactionModel = require("../models/TransactionModel");
+const PaymentDetailsModel = require("../models/PaymentDetailsModel");
 
 class TransactionController {
   // Create a new transaction
@@ -184,28 +185,42 @@ class TransactionController {
     try {
       const { id } = req.params;
       const { payment_amount, payment_mode, payment_date, remarks } = req.body;
-
+  
       if (!payment_amount || !payment_mode) {
         return res.status(400).json({
           success: false,
           message: "Payment amount and mode are required",
         });
       }
-
+  
+      // Generate a unique invoice ID
+      const invoiceId = `INV-${id}-${Date.now().toString().slice(-6)}`;
+  
+      // Update the transaction with new payment total
       const updatedTransaction = await TransactionModel.updatePayment(id, {
         payment_amount,
         payment_mode,
         payment_date: payment_date || new Date(),
         remarks
       });
-
+  
       if (!updatedTransaction) {
         return res.status(404).json({
           success: false,
           message: "Transaction not found",
         });
       }
-
+  
+      // Create a payment detail record
+      await PaymentDetailsModel.createPayment({
+        transaction_id: id,
+        invoice_id: invoiceId,
+        amount: payment_amount,
+        payment_mode,
+        payment_date: payment_date || new Date(),
+        remarks
+      });
+  
       return res.status(200).json({
         success: true,
         message: "Payment updated successfully",
@@ -221,6 +236,25 @@ class TransactionController {
     }
   }
 
+  static async getPaymentDetails(req, res) {
+    try {
+      const { id } = req.params;
+      const payments = await PaymentDetailsModel.getPaymentsByTransactionId(id);
+  
+      return res.status(200).json({
+        success: true,
+        data: payments,
+      });
+    } catch (error) {
+      console.error("Get payment details error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching payment details",
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+  
   // Delete transaction
   static async deleteTransaction(req, res) {
     try {
