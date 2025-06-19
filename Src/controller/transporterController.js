@@ -14,13 +14,13 @@ class TransporterController {
         license_expiry,
         base_charge,
         additional_charges,
-        service_charges, // Add this to accept service charges
+        service_charges,
         total_charge,
         container_no,
         line,
         seal_no,
         number_of_containers,
-        // vehicle_sequence removed
+        vehicle_sequence, // Add this field to track vehicle sequence
       } = req.body;
 
       // Validate required fields
@@ -63,13 +63,13 @@ class TransporterController {
           license_expiry,
           base_charge,
           additional_charges,
-          service_charges, // Pass service charges to model
+          service_charges,
           total_charge,
           container_no,
           line,
           seal_no,
           number_of_containers,
-          
+          vehicle_sequence, // Pass vehicle sequence to model
         }
       );
 
