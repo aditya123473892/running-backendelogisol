@@ -29,5 +29,10 @@ router.delete("/:id", adminAuth, TransactionController.deleteTransaction);
 
 // Add this route
 router.get("/:id/payments", TransactionController.getPaymentDetails);
+// Change this line
+router.get('/transactions/transporter/:transporterId', TransactionController.getTransactionsByTransporterId);
+
+// To this
+router.get('/transporter/:transporterId', TransactionController.getTransactionsByTransporterId);
 
 module.exports = router;

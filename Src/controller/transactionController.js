@@ -42,6 +42,7 @@ class TransactionController {
           message: "Transport request not found",
         });
       }
+      
 
       // Get transporter details
       const transporterDetails = await pool
@@ -132,6 +133,34 @@ class TransactionController {
       });
     }
   }
+  // Get transactions by transporter ID
+static async getTransactionsByTransporterId(req, res) {
+  try {
+    const { transporterId } = req.params;
+    
+    // Query to get transactions by transporter_id
+    const result = await pool
+      .request()
+      .input("transporterId", sql.Int, transporterId)
+      .query(`
+        SELECT * FROM transport_transaction_master
+        WHERE transporter_id = @transporterId
+        ORDER BY created_at DESC
+      `);
+
+    return res.status(200).json({
+      success: true,
+      data: result.recordset,
+    });
+  } catch (error) {
+    console.error("Get transactions by transporter ID error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching transactions",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+}
 
   // Get transaction by ID
   static async getTransactionById(req, res) {
@@ -284,3 +313,5 @@ class TransactionController {
 }
 
 module.exports = TransactionController;
+
+// Get transactions by transporter ID
