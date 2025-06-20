@@ -129,6 +129,16 @@ const transporterModel = {
             )
           `);
         
+        // Update the transport request status to 'Vehicle Assigned'
+        await pool
+          .request()
+          .input("request_id", sql.Int, transportRequestId)
+          .query(`
+            UPDATE transport_requests
+            SET status = 'Vehicle Assigned', updated_at = GETDATE()
+            WHERE id = @request_id
+          `);
+        
         return result.recordset[0];
       } catch (insertError) {
         // If we get a unique constraint violation, try again with a new sequence
@@ -191,6 +201,16 @@ const transporterModel = {
                 @container_no, @line, @seal_no, @number_of_containers, @vehicle_sequence,
                 @seal1, @seal2, @container_total_weight, @cargo_total_weight, @container_type, @container_size
               )
+            `);
+          
+          // Update the transport request status to 'Vehicle Assigned'
+          await pool
+            .request()
+            .input("request_id", sql.Int, transportRequestId)
+            .query(`
+              UPDATE transport_requests
+              SET status = 'Vehicle Assigned', updated_at = GETDATE()
+              WHERE id = @request_id
             `);
           
           return retryResult.recordset[0];
