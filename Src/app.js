@@ -31,9 +31,10 @@ const UserRoutes = require("./routes/UserRoutes");
 const transportRequestRoutes = require("./routes/transportRequestRoutes");
 const transporterRoutes = require("./routes/transporterdetailsroutes");
 const CustomerMasterRoutes = require("./routes/customermasterroutes");
-const transactionRoutes = require("./routes/transactionRoutes"); // Add t
+const transactionRoutes = require("./routes/transactionRoutes"); // Add this line
 const transportlistroutes = require("./routes/transporterlistroutes"); // Add this line
 const serviceroutes = require("./routes/serviceroutes"); // Add this line
+
 
 // Mount routes with more specific routes first
 app.use("/api/auth", authRoutes);
@@ -44,6 +45,8 @@ app.use("/api/customers", CustomerMasterRoutes);
 app.use("/api/transactions", transactionRoutes); // Add this line
 app.use("/api/transporterlist", transportlistroutes); // Add this line
 app.use("/api/services", serviceroutes); // Add this line
+
+
 
 // Add route not found handler
 app.use((req, res, next) => {
