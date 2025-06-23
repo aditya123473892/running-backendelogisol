@@ -19,6 +19,7 @@ const transporterModel = {
   },
 
   // Create new transporter details
+  // Modify the createTransporter function to silently handle sequence conflicts
   createTransporter: async (transportRequestId, transporterData) => {
     try {
       // Always find the next available sequence number first
@@ -60,7 +61,7 @@ const transporterModel = {
         driver_contact,
         license_number,
         license_expiry,
-        base_charge,
+      
         additional_charges,
         service_charges,
         total_charge,
@@ -96,7 +97,7 @@ const transporterModel = {
           .input("driver_contact", sql.NVarChar(20), driver_contact)
           .input("license_number", sql.NVarChar(50), license_number)
           .input("license_expiry", sql.Date, new Date(license_expiry))
-          .input("base_charge", sql.Decimal(12, 2), base_charge)
+          
           .input("additional_charges", sql.Decimal(12, 2), additional_charges || 0)
           .input("service_charges", sql.NVarChar(sql.MAX), service_charges)
           .input("total_charge", sql.Decimal(12, 2), total_charge)
@@ -115,7 +116,7 @@ const transporterModel = {
             INSERT INTO transporter_details (
               request_id, transporter_name, vehicle_number,
               driver_name, driver_contact, license_number, 
-              license_expiry, base_charge, additional_charges, service_charges, total_charge,
+              license_expiry,  additional_charges, service_charges, total_charge,
               container_no, line, seal_no, number_of_containers, vehicle_sequence,
               seal1, seal2, container_total_weight, cargo_total_weight, container_type, container_size
             )
@@ -123,7 +124,7 @@ const transporterModel = {
             VALUES (
               @request_id, @transporter_name, @vehicle_number,
               @driver_name, @driver_contact, @license_number,
-              @license_expiry, @base_charge, @additional_charges, @service_charges, @total_charge,
+              @license_expiry, @additional_charges, @service_charges, @total_charge,
               @container_no, @line, @seal_no, @number_of_containers, @vehicle_sequence,
               @seal1, @seal2, @container_total_weight, @cargo_total_weight, @container_type, @container_size
             )
@@ -143,9 +144,9 @@ const transporterModel = {
       } catch (insertError) {
         // If we get a unique constraint violation, try again with a new sequence
         if (insertError.number === 2627 && insertError.message.includes('UQ_transporter_details_request_vehicle_seq')) {
-          console.log(`Conflict detected for request ${transportRequestId}, sequence ${sequenceToUse}. Retrying with next sequence.`);
+          // Remove console.log statements to prevent showing conflict messages
+          // console.log(`Conflict detected for request ${transportRequestId}, sequence ${sequenceToUse}. Retrying with next sequence.`);
           
-          // Find the truly next available sequence by querying again
           const retryMaxSequenceResult = await pool
             .request()
             .input("request_id", sql.Int, transportRequestId)
@@ -158,7 +159,8 @@ const transporterModel = {
           const retryMaxSequence = retryMaxSequenceResult.recordset[0].max_sequence || 0;
           const retryNextSequence = retryMaxSequence + 1;
           
-          console.log(`Using new sequence ${retryNextSequence} for request ${transportRequestId}`);
+          // Remove console.log statements to prevent showing conflict messages
+          // console.log(`Using new sequence ${retryNextSequence} for request ${transportRequestId}`);
           
           // Try inserting with the new sequence
           const retryResult = await pool
@@ -170,7 +172,7 @@ const transporterModel = {
             .input("driver_contact", sql.NVarChar(20), driver_contact)
             .input("license_number", sql.NVarChar(50), license_number)
             .input("license_expiry", sql.Date, new Date(license_expiry))
-            .input("base_charge", sql.Decimal(12, 2), base_charge)
+            
             .input("additional_charges", sql.Decimal(12, 2), additional_charges || 0)
             .input("service_charges", sql.NVarChar(sql.MAX), service_charges)
             .input("total_charge", sql.Decimal(12, 2), total_charge)
@@ -189,7 +191,7 @@ const transporterModel = {
               INSERT INTO transporter_details (
                 request_id, transporter_name, vehicle_number,
                 driver_name, driver_contact, license_number, 
-                license_expiry, base_charge, additional_charges, service_charges, total_charge,
+                license_expiry, additional_charges, service_charges, total_charge,
                 container_no, line, seal_no, number_of_containers, vehicle_sequence,
                 seal1, seal2, container_total_weight, cargo_total_weight, container_type, container_size
               )
@@ -197,7 +199,7 @@ const transporterModel = {
               VALUES (
                 @request_id, @transporter_name, @vehicle_number,
                 @driver_name, @driver_contact, @license_number,
-                @license_expiry, @base_charge, @additional_charges, @service_charges, @total_charge,
+                @license_expiry, @additional_charges, @service_charges, @total_charge,
                 @container_no, @line, @seal_no, @number_of_containers, @vehicle_sequence,
                 @seal1, @seal2, @container_total_weight, @cargo_total_weight, @container_type, @container_size
               )
@@ -263,7 +265,8 @@ const transporterModel = {
           
           // If there would be a conflict, find the next available sequence
           if (conflictCheck.recordset.length > 0) {
-            console.log(`Conflict detected during update for request ${currentRequestId}, sequence ${transporterData.vehicle_sequence}`);
+            // Remove console.log statements to prevent showing conflict messages
+            // console.log(`Conflict detected during update for request ${currentRequestId}, sequence ${transporterData.vehicle_sequence}`);
             
             const maxSequenceResult = await pool
               .request()
@@ -276,7 +279,8 @@ const transporterModel = {
             
             const maxSequence = maxSequenceResult.recordset[0].max_sequence || 0;
             transporterData.vehicle_sequence = maxSequence + 1;
-            console.log(`Using new sequence ${transporterData.vehicle_sequence} for request ${currentRequestId}`);
+            // Remove console.log statements to prevent showing conflict messages
+            // console.log(`Using new sequence ${transporterData.vehicle_sequence} for request ${currentRequestId}`);
           }
         } else {
           // If no new sequence provided, use the current one
@@ -290,7 +294,7 @@ const transporterModel = {
           driver_contact,
           license_number,
           license_expiry,
-          base_charge,
+        
           additional_charges,
           service_charges, 
           total_charge,
@@ -316,7 +320,7 @@ const transporterModel = {
           .input("driver_contact", sql.NVarChar(20), driver_contact)
           .input("license_number", sql.NVarChar(50), license_number)
           .input("license_expiry", sql.Date, new Date(license_expiry))
-          .input("base_charge", sql.Decimal(12, 2), base_charge)
+          
           .input("additional_charges", sql.Decimal(12, 2), additional_charges || 0)
           .input("service_charges", sql.NVarChar(sql.MAX), service_charges)
           .input("total_charge", sql.Decimal(12, 2), total_charge)
@@ -340,7 +344,7 @@ const transporterModel = {
               driver_contact = @driver_contact,
               license_number = @license_number,
               license_expiry = @license_expiry,
-              base_charge = @base_charge,
+             
               additional_charges = @additional_charges,
               service_charges = @service_charges,
               total_charge = @total_charge,
