@@ -31,4 +31,18 @@ router.put(
   TransporterController.updateContainerDetails
 );
 
+// Get containers by vehicle number for a specific request
+router.get(
+  "/transport-requests/:requestId/vehicle/:vehicleNumber/containers",
+  auth,
+  TransporterController.getContainersByVehicleNumber
+);
+
+// Add multiple containers to a vehicle
+router.post(
+  "/transport-requests/:requestId/vehicle/:vehicleNumber/containers",
+  auth,
+  TransporterController.addContainersToVehicle
+);
+
 module.exports = router;

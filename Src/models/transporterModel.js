@@ -68,7 +68,7 @@ const transporterModel = {
         container_no,
         line,
         seal_no,
-        number_of_containers,
+        
         seal1,
         seal2,
         container_total_weight,
@@ -104,7 +104,7 @@ const transporterModel = {
           .input("container_no", sql.NVarChar(100), container_no || null)
           .input("line", sql.NVarChar(100), line || null)
           .input("seal_no", sql.NVarChar(100), seal_no || null)
-          .input("number_of_containers", sql.Int, number_of_containers || null)
+          
           .input("seal1", sql.NVarChar(100), seal1 || null)
           .input("seal2", sql.NVarChar(100), seal2 || null)
           .input("container_total_weight", sql.Decimal(12, 2), container_total_weight || null)
@@ -117,7 +117,7 @@ const transporterModel = {
               request_id, transporter_name, vehicle_number,
               driver_name, driver_contact, license_number, 
               license_expiry,  additional_charges, service_charges, total_charge,
-              container_no, line, seal_no, number_of_containers, vehicle_sequence,
+              container_no, line, seal_no,  vehicle_sequence,
               seal1, seal2, container_total_weight, cargo_total_weight, container_type, container_size
             )
             OUTPUT INSERTED.*
@@ -125,7 +125,7 @@ const transporterModel = {
               @request_id, @transporter_name, @vehicle_number,
               @driver_name, @driver_contact, @license_number,
               @license_expiry, @additional_charges, @service_charges, @total_charge,
-              @container_no, @line, @seal_no, @number_of_containers, @vehicle_sequence,
+              @container_no, @line, @seal_no,  @vehicle_sequence,
               @seal1, @seal2, @container_total_weight, @cargo_total_weight, @container_type, @container_size
             )
           `);
@@ -179,7 +179,7 @@ const transporterModel = {
             .input("container_no", sql.NVarChar(100), container_no || null)
             .input("line", sql.NVarChar(100), line || null)
             .input("seal_no", sql.NVarChar(100), seal_no || null)
-            .input("number_of_containers", sql.Int, number_of_containers || null)
+            
             .input("seal1", sql.NVarChar(100), seal1 || null)
             .input("seal2", sql.NVarChar(100), seal2 || null)
             .input("container_total_weight", sql.Decimal(12, 2), container_total_weight || null)
@@ -192,7 +192,7 @@ const transporterModel = {
                 request_id, transporter_name, vehicle_number,
                 driver_name, driver_contact, license_number, 
                 license_expiry, additional_charges, service_charges, total_charge,
-                container_no, line, seal_no, number_of_containers, vehicle_sequence,
+                container_no, line, seal_no,  vehicle_sequence,
                 seal1, seal2, container_total_weight, cargo_total_weight, container_type, container_size
               )
               OUTPUT INSERTED.*
@@ -200,7 +200,7 @@ const transporterModel = {
                 @request_id, @transporter_name, @vehicle_number,
                 @driver_name, @driver_contact, @license_number,
                 @license_expiry, @additional_charges, @service_charges, @total_charge,
-                @container_no, @line, @seal_no, @number_of_containers, @vehicle_sequence,
+                @container_no, @line, @seal_no,  @vehicle_sequence,
                 @seal1, @seal2, @container_total_weight, @cargo_total_weight, @container_type, @container_size
               )
             `);
@@ -301,7 +301,7 @@ const transporterModel = {
           container_no,
           line,
           seal_no,
-          number_of_containers,
+          
           seal1,
           seal2,
           container_total_weight,
@@ -327,7 +327,7 @@ const transporterModel = {
           .input("container_no", sql.NVarChar(100), container_no || null)
           .input("line", sql.NVarChar(100), line || null)
           .input("seal_no", sql.NVarChar(100), seal_no || null)
-          .input("number_of_containers", sql.Int, number_of_containers || null)
+          
           .input("seal1", sql.NVarChar(100), seal1 || null)
           .input("seal2", sql.NVarChar(100), seal2 || null)
           .input("container_total_weight", sql.Decimal(12, 2), container_total_weight || null)
@@ -351,7 +351,7 @@ const transporterModel = {
               container_no = @container_no,
               line = @line,
               seal_no = @seal_no,
-              number_of_containers = @number_of_containers,
+             
               seal1 = @seal1,
               seal2 = @seal2,
               container_total_weight = @container_total_weight,
@@ -374,8 +374,19 @@ const transporterModel = {
     // Update container details only
     updateContainerDetails: async (id, containerData) => {
       try {
-        const { container_no, line, seal_no, number_of_containers } =
-          containerData;
+        const { 
+          container_no, 
+          line, 
+          seal_no, 
+          
+          seal1,                 // Add this
+          seal2,                 // Add this
+          container_total_weight, // Add this
+          cargo_total_weight,    // Add this
+          container_type,        // Add this
+          container_size,        // Add this
+          vehicle_number         // Add this if needed
+        } = containerData;
   
         const result = await pool
           .request()
@@ -383,14 +394,26 @@ const transporterModel = {
           .input("container_no", sql.NVarChar(100), container_no || null)
           .input("line", sql.NVarChar(100), line || null)
           .input("seal_no", sql.NVarChar(100), seal_no || null)
-          .input("number_of_containers", sql.Int, number_of_containers || null)
+          
+          .input("seal1", sql.NVarChar(100), seal1 || null)
+          .input("seal2", sql.NVarChar(100), seal2 || null)
+          .input("container_total_weight", sql.Decimal(12, 2), container_total_weight || null)
+          .input("cargo_total_weight", sql.Decimal(12, 2), cargo_total_weight || null)
+          .input("container_type", sql.NVarChar(50), container_type || null)
+          .input("container_size", sql.NVarChar(20), container_size || null)
           .query(`
             UPDATE transporter_details 
             SET 
               container_no = @container_no,
               line = @line,
               seal_no = @seal_no,
-              number_of_containers = @number_of_containers,
+             
+              seal1 = @seal1,
+              seal2 = @seal2,
+              container_total_weight = @container_total_weight,
+              cargo_total_weight = @cargo_total_weight,
+              container_type = @container_type,
+              container_size = @container_size,
               updated_at = GETDATE()
             OUTPUT INSERTED.*
             WHERE id = @id
@@ -474,6 +497,145 @@ const transporterModel = {
         throw error;
       }
     },
+
+  // Get containers by vehicle number for a specific request
+  getContainersByVehicleNumber: async (requestId, vehicleNumber) => {
+    try {
+      const result = await pool
+        .request()
+        .input("request_id", sql.Int, requestId)
+        .input("vehicle_number", sql.NVarChar(50), vehicleNumber)
+        .query(`
+          SELECT * FROM transporter_details 
+          WHERE request_id = @request_id AND vehicle_number = @vehicle_number
+          ORDER BY vehicle_sequence
+        `);
+      return result.recordset;
+    } catch (error) {
+      console.error("Database error:", error);
+      throw error;
+    }
+  },
+
+  // Add multiple containers to a vehicle
+  addContainersToVehicle: async (requestId, vehicleNumber, containersData) => {
+    try {
+      // First, get the vehicle details to ensure it exists
+      const vehicleResult = await pool
+        .request()
+        .input("request_id", sql.Int, requestId)
+        .input("vehicle_number", sql.NVarChar(50), vehicleNumber)
+        .query(`
+          SELECT id FROM transporter_details 
+          WHERE request_id = @request_id AND vehicle_number = @vehicle_number
+        `);
+  
+      if (vehicleResult.recordset.length === 0) {
+        throw new Error("Vehicle not found for this request");
+      }
+  
+      // Process each container in the array
+      const results = [];
+      for (const containerData of containersData) {
+        const {
+          container_no,
+          line,
+          seal_no,
+          seal1,
+          seal2,
+          container_total_weight,
+          cargo_total_weight,
+          container_type,
+          container_size
+        } = containerData;
+  
+        // For each container, create a new transporter_details record with the same vehicle info
+        // but different container details
+        const vehicleId = vehicleResult.recordset[0].id;
+        
+        // Get the vehicle details to copy
+        const vehicleDetailsResult = await pool
+          .request()
+          .input("id", sql.Int, vehicleId)
+          .query(`
+            SELECT 
+              transporter_name, vehicle_number, driver_name, driver_contact,
+              license_number, license_expiry, additional_charges,
+              service_charges, total_charge
+            FROM transporter_details 
+            WHERE id = @id
+          `);
+  
+        if (vehicleDetailsResult.recordset.length === 0) {
+          throw new Error("Vehicle details not found");
+        }
+  
+        const vehicleDetails = vehicleDetailsResult.recordset[0];
+  
+        // Find the next available sequence number
+        const maxSequenceResult = await pool
+          .request()
+          .input("request_id", sql.Int, requestId)
+          .query(`
+            SELECT MAX(vehicle_sequence) as max_sequence 
+            FROM transporter_details
+            WHERE request_id = @request_id
+          `);
+        
+        const maxSequence = maxSequenceResult.recordset[0].max_sequence || 0;
+        const nextSequence = maxSequence + 1;
+  
+        // Insert the new container record
+        const insertResult = await pool
+          .request()
+          .input("request_id", sql.Int, requestId)
+          .input("transporter_name", sql.NVarChar(255), vehicleDetails.transporter_name)
+          .input("vehicle_number", sql.NVarChar(50), vehicleDetails.vehicle_number)
+          .input("driver_name", sql.NVarChar(255), vehicleDetails.driver_name)
+          .input("driver_contact", sql.NVarChar(20), vehicleDetails.driver_contact)
+          .input("license_number", sql.NVarChar(50), vehicleDetails.license_number)
+          .input("license_expiry", sql.Date, new Date(vehicleDetails.license_expiry))
+          .input("additional_charges", sql.Decimal(12, 2), vehicleDetails.additional_charges || 0)
+          .input("service_charges", sql.NVarChar(sql.MAX), vehicleDetails.service_charges)
+          .input("total_charge", sql.Decimal(12, 2), vehicleDetails.total_charge)
+          .input("container_no", sql.NVarChar(100), container_no || null)
+          .input("line", sql.NVarChar(100), line || null)
+          .input("seal_no", sql.NVarChar(100), seal_no || null)
+        // Each record represents one container
+          .input("seal1", sql.NVarChar(100), seal1 || null)
+          .input("seal2", sql.NVarChar(100), seal2 || null)
+          .input("container_total_weight", sql.Decimal(12, 2), container_total_weight || null)
+          .input("cargo_total_weight", sql.Decimal(12, 2), cargo_total_weight || null)
+          .input("container_type", sql.NVarChar(50), container_type || null)
+          .input("container_size", sql.NVarChar(20), container_size || null)
+          .input("vehicle_sequence", sql.Int, nextSequence)
+          .query(`
+            INSERT INTO transporter_details (
+              request_id, transporter_name, vehicle_number,
+              driver_name, driver_contact, license_number, 
+              license_expiry, additional_charges, service_charges, total_charge,
+              container_no, line, seal_no,  vehicle_sequence,
+              seal1, seal2, container_total_weight, cargo_total_weight, container_type, container_size
+            )
+            OUTPUT INSERTED.*
+            VALUES (
+              @request_id, @transporter_name, @vehicle_number,
+              @driver_name, @driver_contact, @license_number,
+              @license_expiry, @additional_charges, @service_charges, @total_charge,
+              @container_no, @line, @seal_no, @vehicle_sequence,
+              @seal1, @seal2, @container_total_weight, @cargo_total_weight, @container_type, @container_size
+            )
+          `);
+  
+        results.push(insertResult.recordset[0]);
+      }
+  
+      return results;
+    } catch (error) {
+      console.error("Add containers to vehicle error:", error);
+      throw error;
+    }
+  },
 };
 
 module.exports = transporterModel;

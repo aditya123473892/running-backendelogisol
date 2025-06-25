@@ -310,7 +310,36 @@ static async getTransactionsByTransporterId(req, res) {
       });
     }
   }
+  // Get transactions by vehicle number
+static async getTransactionsByVehicleNumber(req, res) {
+  try {
+    const { vehicleNumber } = req.params;
+    
+    // Query to get transactions by vehicle_number
+    const result = await pool
+      .request()
+      .input("vehicleNumber", sql.VarChar(50), vehicleNumber)
+      .query(`
+        SELECT * FROM transport_transaction_master
+        WHERE vehicle_number = @vehicleNumber
+        ORDER BY created_at DESC
+      `);
+
+    return res.status(200).json({
+      success: true,
+      data: result.recordset,
+    });
+  } catch (error) {
+    console.error("Get transactions by vehicle number error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching transactions",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
 }
+}
+
 
 module.exports = TransactionController;
 

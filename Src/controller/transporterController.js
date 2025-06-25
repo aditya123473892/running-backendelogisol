@@ -249,26 +249,46 @@ class TransporterController {
   }
 
   // Update container details
+  // Update container details
   static async updateContainerDetails(req, res) {
     try {
       const { id } = req.params;
-      const { container_no, line, seal_no, number_of_containers } = req.body;
-
+      const { 
+        container_no, 
+        line, 
+        seal_no, 
+        number_of_containers,
+        seal1,                 // Add this
+        seal2,                 // Add this
+        container_total_weight, // Add this
+        cargo_total_weight,    // Add this
+        container_type,        // Add this
+        container_size,        // Add this
+        vehicle_number         // Add this
+      } = req.body;
+  
       // Update container details using model
       const result = await transporterModel.updateContainerDetails(id, {
         container_no,
         line,
         seal_no,
         number_of_containers,
+        seal1,                 // Add this
+        seal2,                 // Add this
+        container_total_weight, // Add this
+        cargo_total_weight,    // Add this
+        container_type,        // Add this
+        container_size,        // Add this
+        vehicle_number         // Add this
       });
-
+  
       if (!result) {
         return res.status(404).json({
           success: false,
           message: "Transporter details not found",
         });
       }
-
+  
       return res.status(200).json({
         success: true,
         message: "Container details updated successfully",
@@ -279,6 +299,102 @@ class TransporterController {
       return res.status(500).json({
         success: false,
         message: "Error updating container details",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+
+  // Get containers by vehicle number for a specific request
+  static async getContainersByVehicleNumber(req, res) {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const vehicleNumber = req.params.vehicleNumber;
+
+      // Validate inputs
+      if (!requestId || !vehicleNumber) {
+        return res.status(400).json({
+          success: false,
+          message: "Request ID and vehicle number are required",
+        });
+      }
+
+      const containers = await transporterModel.getContainersByVehicleNumber(
+        requestId,
+        vehicleNumber
+      );
+
+      if (!containers || containers.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No containers found for this vehicle and request",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: containers,
+      });
+    } catch (error) {
+      console.error("Get containers by vehicle number error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching containers",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+
+  // Add multiple containers to a vehicle
+  static async addContainersToVehicle(req, res) {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const vehicleNumber = req.params.vehicleNumber;
+      const { containers } = req.body;
+
+      // Validate inputs
+      if (!requestId || !vehicleNumber) {
+        return res.status(400).json({
+          success: false,
+          message: "Request ID and vehicle number are required",
+        });
+      }
+
+      if (!containers || !Array.isArray(containers) || containers.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Containers array is required",
+        });
+      }
+
+      // Check if transport request exists
+      const requestCheck = await transporterModel.checkTransportRequestExists(
+        requestId
+      );
+      if (!requestCheck) {
+        return res.status(404).json({
+          success: false,
+          message: "Transport request not found",
+        });
+      }
+
+      const results = await transporterModel.addContainersToVehicle(
+        requestId,
+        vehicleNumber,
+        containers
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: `${results.length} containers added successfully to vehicle ${vehicleNumber}`,
+        data: results,
+      });
+    } catch (error) {
+      console.error("Add containers to vehicle error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error adding containers to vehicle",
         error:
           process.env.NODE_ENV === "development" ? error.message : undefined,
       });

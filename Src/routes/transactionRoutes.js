@@ -27,12 +27,13 @@ router.put("/:id/payment", adminAuth, TransactionController.updatePayment);
 
 router.delete("/:id", adminAuth, TransactionController.deleteTransaction);
 
-// Add this route
 router.get("/:id/payments", TransactionController.getPaymentDetails);
-// Change this line
+
 router.get('/transactions/transporter/:transporterId', TransactionController.getTransactionsByTransporterId);
 
-// To this
+
 router.get('/transporter/:transporterId', TransactionController.getTransactionsByTransporterId);
+// Add this line with your other routes
+router.get('/vehicle/:vehicleNumber', TransactionController.getTransactionsByVehicleNumber);
 
 module.exports = router;
