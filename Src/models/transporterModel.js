@@ -636,6 +636,27 @@ const transporterModel = {
       throw error;
     }
   },
+  deleteContainer: async (containerId) => {
+  try {
+    const result = await pool
+      .request()
+      .input("id", sql.Int, containerId)
+      .query(`
+        DELETE FROM transporter_details 
+        OUTPUT DELETED.*
+        WHERE id = @id
+      `);
+
+    return result.recordset[0];
+  } catch (error) {
+    console.error("Delete container error:", error);
+    throw error;
+  }
+}
+
 };
 
 module.exports = transporterModel;
+
+
+// Delete container

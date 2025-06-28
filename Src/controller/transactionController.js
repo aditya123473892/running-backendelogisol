@@ -338,9 +338,42 @@ static async getTransactionsByVehicleNumber(req, res) {
     });
   }
 }
+
+static async getTransactionsByCustomerId(req, res) {
+  try {
+    const { customerId } = req.params;
+    
+    // Query to get transactions by customer_id from transport_requests
+    const result = await pool
+      .request()
+      .input("customerId", sql.Int, customerId)
+      .query(`
+        SELECT ttm.*, tr.status as request_status, u.name as customer_name
+        FROM transport_transaction_master ttm
+        INNER JOIN transport_requests tr ON ttm.request_id = tr.id
+        INNER JOIN users u ON tr.customer_id = u.id
+        WHERE tr.customer_id = @customerId
+        ORDER BY ttm.created_at DESC
+      `);
+
+    return res.status(200).json({
+      success: true,
+      data: result.recordset,
+    });
+  } catch (error) {
+    console.error("Get transactions by customer ID error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching transactions",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+}
+
 }
 
 
 module.exports = TransactionController;
 
 // Get transactions by transporter ID
+// Get transactions by customer ID

@@ -45,4 +45,11 @@ router.post(
   TransporterController.addContainersToVehicle
 );
 
+// Delete container
+router.delete(
+  "/transporter/container/:id",
+  auth,
+  TransporterController.deleteContainer
+);
+
 module.exports = router;

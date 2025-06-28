@@ -400,6 +400,42 @@ class TransporterController {
       });
     }
   }
+
+  // Delete container
+  static async deleteContainer(req, res) {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: "Container ID is required",
+        });
+      }
+
+      const result = await transporterModel.deleteContainer(id);
+
+      if (!result) {
+        return res.status(404).json({
+          success: false,
+          message: "Container not found",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Container deleted successfully",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Delete container error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error deleting container",
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
 }
 
 module.exports = TransporterController;
