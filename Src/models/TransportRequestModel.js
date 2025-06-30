@@ -20,8 +20,11 @@ class TransportRequest {
         containers_40ft,
         total_containers,
         expected_pickup_date,
+        expected_pickup_time, // Added missing field
         expected_delivery_date,
-
+        expected_delivery_time, // Added missing field
+        requested_price, // Added missing field
+        no_of_vehicles, // Added missing field
         status,
         customerId,
       } = requestData;
@@ -53,24 +56,29 @@ class TransportRequest {
         .input("containers_40ft", sql.Int, containers_40ft || 0)
         .input("total_containers", sql.Int, total_containers)
         .input("expected_pickup_date", sql.Date, expected_pickup_date)
+        .input("expected_pickup_time", sql.Time, expected_pickup_time) // Added time field
         .input("expected_delivery_date", sql.Date, expected_delivery_date)
-        .input("requested_price", sql.Decimal(10, 2), requested_price)
+        .input("expected_delivery_time", sql.Time, expected_delivery_time) // Added time field
+        .input("requested_price", sql.Decimal(10, 2), requested_price) // Fixed missing field
+        .input("no_of_vehicles", sql.Int, no_of_vehicles || 1) // Added missing field
         .input("status", sql.NVarChar, status).query(`
           INSERT INTO transport_requests (
             customer_id, vehicle_type, vehicle_size, consignee, consigner,
             containers_20ft, containers_40ft, total_containers,
             pickup_location, stuffing_location, delivery_location,
             commodity, cargo_type, cargo_weight, service_type,
-            service_prices, expected_pickup_date, expected_delivery_date,
-           status, created_at
+            service_prices, expected_pickup_date, expected_pickup_time,
+            expected_delivery_date, expected_delivery_time,
+            requested_price, no_of_vehicles, status, created_at
           )
           VALUES (
             @customerId, @vehicle_type, @vehicle_size, @consignee, @consigner,
             @containers_20ft, @containers_40ft, @total_containers,
             @pickup_location, @stuffing_location, @delivery_location,
             @commodity, @cargo_type, @cargo_weight, @service_type,
-            @service_prices, @expected_pickup_date, @expected_delivery_date,
-            @requested_price, @status, GETDATE()
+            @service_prices, @expected_pickup_date, @expected_pickup_time,
+            @expected_delivery_date, @expected_delivery_time,
+            @requested_price, @no_of_vehicles, @status, GETDATE()
           )
         `);
 
@@ -91,7 +99,9 @@ class TransportRequest {
             CONVERT(varchar, tr.created_at, 120) as request_created_at,
             CONVERT(varchar, tr.updated_at, 120) as request_updated_at,
             CONVERT(varchar, tr.expected_pickup_date, 23) as formatted_pickup_date,
-            CONVERT(varchar, tr.expected_delivery_date, 23) as formatted_delivery_date
+            CONVERT(varchar, tr.expected_delivery_date, 23) as formatted_delivery_date,
+            CONVERT(varchar, tr.expected_pickup_time, 108) as formatted_pickup_time,
+            CONVERT(varchar, tr.expected_delivery_time, 108) as formatted_delivery_time
           FROM transport_requests tr
           WHERE tr.customer_id = @customerId
           ORDER BY tr.created_at DESC
@@ -111,6 +121,8 @@ class TransportRequest {
           CONVERT(varchar, tr.updated_at, 120) as request_updated_at,
           CONVERT(varchar, tr.expected_pickup_date, 23) as formatted_pickup_date,
           CONVERT(varchar, tr.expected_delivery_date, 23) as formatted_delivery_date,
+          CONVERT(varchar, tr.expected_pickup_time, 108) as formatted_pickup_time,
+          CONVERT(varchar, tr.expected_delivery_time, 108) as formatted_delivery_time,
           u.name as customer_name,
           u.email as customer_email,
           u.created_at as user_created_at
@@ -126,7 +138,6 @@ class TransportRequest {
 
   static async updateStatus(requestId, status, adminComment) {
     try {
-      await pool.connect();
       const result = await pool
         .request()
         .input("requestId", sql.Int, requestId)
@@ -168,8 +179,11 @@ class TransportRequest {
         containers_40ft,
         total_containers,
         expected_pickup_date,
+        expected_pickup_time, // Added missing field
         expected_delivery_date,
-
+        expected_delivery_time, // Added missing field
+        requested_price, // Added missing field
+        no_of_vehicles, // Added missing field
         customerId,
       } = requestData;
 
@@ -201,8 +215,12 @@ class TransportRequest {
         .input("containers_40ft", sql.Int, containers_40ft)
         .input("total_containers", sql.Int, total_containers)
         .input("expected_pickup_date", sql.Date, expected_pickup_date)
+        .input("expected_pickup_time", sql.Time, expected_pickup_time) // Added time field
         .input("expected_delivery_date", sql.Date, expected_delivery_date)
-        .input("requested_price", sql.Decimal(10, 2), requested_price).query(`
+        .input("expected_delivery_time", sql.Time, expected_delivery_time) // Added time field
+        .input("requested_price", sql.Decimal(10, 2), requested_price) // Added missing field
+        .input("no_of_vehicles", sql.Int, no_of_vehicles || 1) // Added missing field
+        .query(`
           UPDATE transport_requests
           SET 
             consignee = @consignee,
@@ -221,8 +239,11 @@ class TransportRequest {
             containers_40ft = @containers_40ft,
             total_containers = @total_containers,
             expected_pickup_date = @expected_pickup_date,
+            expected_pickup_time = @expected_pickup_time,
             expected_delivery_date = @expected_delivery_date,
+            expected_delivery_time = @expected_delivery_time,
             requested_price = @requested_price,
+            no_of_vehicles = @no_of_vehicles,
             updated_at = GETDATE()
           WHERE id = @id AND customer_id = @customerId
         `);

@@ -1,6 +1,7 @@
 const TransportRequest = require("../models/TransportRequestModel");
 const { pool, sql } = require("../config/dbconfig");
 
+// Improved createRequest function with better time handling
 exports.createRequest = async (req, res) => {
   try {
     const {
@@ -20,33 +21,116 @@ exports.createRequest = async (req, res) => {
       containers_40ft,
       total_containers,
       expected_pickup_date,
+      expected_pickup_time,
       expected_delivery_date,
+      expected_delivery_time,
       requested_price,
       no_of_vehicles,
       status,
     } = req.body;
 
-    // Parse service_type if it's a string
-    let parsedServiceType = service_type;
-    try {
-      if (typeof service_type === "string") {
-        parsedServiceType = JSON.parse(service_type);
-      }
-    } catch (error) {
-      console.error("Error parsing service_type:", error);
-      parsedServiceType = ["Transport"];
+    // Validate required date and time fields
+    if (!expected_pickup_date || !expected_pickup_time) {
+      return res.status(400).json({
+        success: false,
+        message: "Expected pickup date and time are required",
+      });
     }
 
-    // Parse service_prices if it's a string
-    let parsedServicePrices = service_prices || {};
-    try {
-      if (typeof service_prices === "string") {
-        parsedServicePrices = JSON.parse(service_prices);
-      }
-    } catch (error) {
-      console.error("Error parsing service_prices:", error);
-      parsedServicePrices = {};
+    if (!expected_delivery_date || !expected_delivery_time) {
+      return res.status(400).json({
+        success: false,
+        message: "Expected delivery date and time are required",
+      });
     }
+
+    // Format time to HH:MM for nvarchar(5)
+    const formatTimeForSQL = (timeString, fieldName) => {
+      if (
+        !timeString ||
+        typeof timeString !== "string" ||
+        timeString.trim() === ""
+      ) {
+        throw new Error(`Invalid ${fieldName} format. Expected HH:MM`);
+      }
+
+      const cleanTime = timeString.trim();
+
+      // Accept HH:MM
+      if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(cleanTime)) {
+        return cleanTime;
+      }
+
+      // Accept HH:MM:SS or HH:MM:SS.nnnnnnn and extract HH:MM
+      if (
+        /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?(\.\d{1,7})?$/.test(
+          cleanTime
+        )
+      ) {
+        return cleanTime.split(":").slice(0, 2).join(":");
+      }
+
+      throw new Error(`Invalid ${fieldName} format. Expected HH:MM`);
+    };
+
+    let formattedPickupTime, formattedDeliveryTime;
+
+    try {
+      formattedPickupTime = formatTimeForSQL(
+        expected_pickup_time,
+        "pickup time"
+      );
+      formattedDeliveryTime = formatTimeForSQL(
+        expected_delivery_time,
+        "delivery time"
+      );
+    } catch (timeError) {
+      return res.status(400).json({
+        success: false,
+        message: timeError.message,
+      });
+    }
+
+    // Parse service_type and service_prices if strings
+    let parsedServiceType = service_type || ["Transport"];
+    let parsedServicePrices = service_prices || {};
+
+    if (typeof service_type === "string") {
+      try {
+        parsedServiceType = JSON.parse(service_type);
+      } catch (error) {
+        console.error("Error parsing service_type:", error);
+        parsedServiceType = ["Transport"];
+      }
+    }
+
+    if (typeof service_prices === "string") {
+      try {
+        parsedServicePrices = JSON.parse(service_prices);
+      } catch (error) {
+        console.error("Error parsing service_prices:", error);
+      }
+    }
+
+    // Validate and convert dates
+    const pickupDate = new Date(expected_pickup_date);
+    const deliveryDate = new Date(expected_delivery_date);
+
+    if (isNaN(pickupDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid pickup date format",
+      });
+    }
+
+    if (isNaN(deliveryDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid delivery date format",
+      });
+    }
+
+    // Debug logging for time values
 
     const result = await pool
       .request()
@@ -74,12 +158,10 @@ exports.createRequest = async (req, res) => {
         sql.NVarChar(sql.MAX),
         JSON.stringify(parsedServicePrices)
       )
-      .input("expected_pickup_date", sql.Date, new Date(expected_pickup_date))
-      .input(
-        "expected_delivery_date",
-        sql.Date,
-        new Date(expected_delivery_date)
-      )
+      .input("expected_pickup_date", sql.Date, pickupDate)
+      .input("expected_pickup_time", sql.NVarChar(5), formattedPickupTime)
+      .input("expected_delivery_date", sql.Date, deliveryDate)
+      .input("expected_delivery_time", sql.NVarChar(5), formattedDeliveryTime)
       .input("requested_price", sql.Decimal(10, 2), requested_price)
       .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
       .input("status", sql.NVarChar, status || "Pending").query(`
@@ -88,7 +170,8 @@ exports.createRequest = async (req, res) => {
           containers_20ft, containers_40ft, total_containers,
           pickup_location, stuffing_location, delivery_location,
           commodity, cargo_type, cargo_weight, service_type,
-          service_prices, expected_pickup_date, expected_delivery_date,
+          service_prices, expected_pickup_date, expected_pickup_time,
+          expected_delivery_date, expected_delivery_time,
           requested_price, status, no_of_vehicles, created_at
         )
         OUTPUT INSERTED.*
@@ -97,7 +180,8 @@ exports.createRequest = async (req, res) => {
           @containers_20ft, @containers_40ft, @total_containers,
           @pickup_location, @stuffing_location, @delivery_location,
           @commodity, @cargo_type, @cargo_weight, @service_type,
-          @service_prices, @expected_pickup_date, @expected_delivery_date,
+          @service_prices, @expected_pickup_date, @expected_pickup_time,
+          @expected_delivery_date, @expected_delivery_time,
           @requested_price, @status, @no_of_vehicles, GETDATE()
         )
       `);
@@ -117,6 +201,49 @@ exports.createRequest = async (req, res) => {
   }
 };
 
+const formatTimeForClient = (timeString) => {
+  if (!timeString) return null;
+
+  if (typeof timeString === "string" && timeString.includes(":")) {
+    const parts = timeString.split(":");
+    if (parts.length >= 2) {
+      return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+    }
+  }
+
+  return timeString;
+};
+
+exports.getMyRequests = async (req, res) => {
+  try {
+    const result = await pool
+      .request()
+      .input("customer_id", sql.Int, req.user.id)
+      .query(
+        "SELECT * FROM transport_requests WHERE customer_id = @customer_id ORDER BY created_at DESC"
+      );
+
+    const formattedRequests = result.recordset.map((request) => ({
+      ...request,
+      expected_pickup_time: formatTimeForClient(request.expected_pickup_time),
+      expected_delivery_time: formatTimeForClient(
+        request.expected_delivery_time
+      ),
+    }));
+
+    return res.json({
+      success: true,
+      requests: formattedRequests,
+    });
+  } catch (error) {
+    console.error("Get requests error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching requests",
+      error: error.message,
+    });
+  }
+};
 exports.updateRequest = async (req, res) => {
   try {
     const requestId = req.params.id;
@@ -137,31 +264,118 @@ exports.updateRequest = async (req, res) => {
       containers_40ft,
       total_containers,
       expected_pickup_date,
+      expected_pickup_time,
       expected_delivery_date,
+      expected_delivery_time,
       requested_price,
       no_of_vehicles,
       status,
     } = req.body;
 
-    // Parse service_type and service_prices if they're strings
+    // Parse service_type and service_prices if strings
     let parsedServiceType = service_type;
-    let parsedServicePrices = service_prices;
+    let parsedServicePrices = service_prices || {};
 
-    try {
-      if (typeof service_type === "string") {
+    if (typeof service_type === "string") {
+      try {
         parsedServiceType = JSON.parse(service_type);
+      } catch (error) {
+        console.error("Error parsing service_type:", error);
+        parsedServiceType = ["Transport"];
       }
-    } catch (error) {
-      console.error("Error parsing service_type:", error);
     }
 
-    try {
-      if (typeof service_prices === "string") {
+    if (typeof service_prices === "string") {
+      try {
         parsedServicePrices = JSON.parse(service_prices);
+      } catch (error) {
+        console.error("Error parsing service_prices:", error);
       }
-    } catch (error) {
-      console.error("Error parsing service_prices:", error);
     }
+
+    // Validate and convert dates if provided
+    let pickupDate = expected_pickup_date;
+    let deliveryDate = expected_delivery_date;
+
+    if (expected_pickup_date) {
+      pickupDate = new Date(expected_pickup_date);
+      if (isNaN(pickupDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid pickup date format",
+        });
+      }
+    }
+
+    if (expected_delivery_date) {
+      deliveryDate = new Date(expected_delivery_date);
+      if (isNaN(deliveryDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid delivery date format",
+        });
+      }
+    }
+
+    // Format time to HH:MM for nvarchar(5)
+    const formatTimeForSQL = (timeString, fieldName) => {
+      if (
+        !timeString ||
+        typeof timeString !== "string" ||
+        timeString.trim() === ""
+      ) {
+        return null; // Allow null for nullable fields
+      }
+
+      const cleanTime = timeString.trim();
+
+      // Accept HH:MM
+      if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(cleanTime)) {
+        return cleanTime;
+      }
+
+      // Accept HH:MM:SS or HH:MM:SS.nnnnnnn and extract HH:MM
+      if (
+        /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?(\.\d{1,7})?$/.test(
+          cleanTime
+        )
+      ) {
+        return cleanTime.split(":").slice(0, 2).join(":");
+      }
+
+      throw new Error(`Invalid ${fieldName} format. Expected HH:MM`);
+    };
+
+    let formattedPickupTime = null;
+    let formattedDeliveryTime = null;
+
+    try {
+      if (expected_pickup_time) {
+        formattedPickupTime = formatTimeForSQL(
+          expected_pickup_time,
+          "pickup time"
+        );
+      }
+      if (expected_delivery_time) {
+        formattedDeliveryTime = formatTimeForSQL(
+          expected_delivery_time,
+          "delivery time"
+        );
+      }
+    } catch (timeError) {
+      return res.status(400).json({
+        success: false,
+        message: timeError.message,
+      });
+    }
+
+    // Debug logging for time values
+    console.log("Time values before query:", {
+      rawPickupTime: expected_pickup_time,
+      formattedPickupTime,
+      rawDeliveryTime: expected_delivery_time,
+      formattedDeliveryTime,
+    });
 
     const result = await pool
       .request()
@@ -186,11 +400,13 @@ exports.updateRequest = async (req, res) => {
         sql.NVarChar(sql.MAX),
         JSON.stringify(parsedServicePrices)
       )
-      .input("containers_20ft", sql.Int, containers_20ft)
-      .input("containers_40ft", sql.Int, containers_40ft)
-      .input("total_containers", sql.Int, total_containers)
-      .input("expected_pickup_date", sql.Date, expected_pickup_date)
-      .input("expected_delivery_date", sql.Date, expected_delivery_date)
+      .input("containers_20ft", sql.Int, containers_20ft || 0)
+      .input("containers_40ft", sql.Int, containers_40ft || 0)
+      .input("total_containers", sql.Int, total_containers || 0)
+      .input("expected_pickup_date", sql.Date, pickupDate)
+      .input("expected_pickup_time", sql.NVarChar(5), formattedPickupTime)
+      .input("expected_delivery_date", sql.Date, deliveryDate)
+      .input("expected_delivery_time", sql.NVarChar(5), formattedDeliveryTime)
       .input("requested_price", sql.Decimal(10, 2), requested_price)
       .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
       .input("status", sql.NVarChar, status).query(`
@@ -211,7 +427,9 @@ exports.updateRequest = async (req, res) => {
             containers_40ft = @containers_40ft,
             total_containers = @total_containers,
             expected_pickup_date = @expected_pickup_date,
+            expected_pickup_time = @expected_pickup_time,
             expected_delivery_date = @expected_delivery_date,
+            expected_delivery_time = @expected_delivery_time,
             requested_price = @requested_price,
             status = @status,
             no_of_vehicles = @no_of_vehicles,
@@ -225,9 +443,10 @@ exports.updateRequest = async (req, res) => {
     });
   } catch (error) {
     console.error("Update error:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to update transport request" });
+    res.status(500).json({
+      success: false,
+      message: `Failed to update transport request: ${error.message}`,
+    });
   }
 };
 
