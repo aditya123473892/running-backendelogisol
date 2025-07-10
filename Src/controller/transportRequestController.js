@@ -27,6 +27,7 @@ exports.createRequest = async (req, res) => {
       requested_price,
       no_of_vehicles,
       status,
+        vehicle_status
     } = req.body;
 
     // Validate required date and time fields
@@ -164,26 +165,29 @@ exports.createRequest = async (req, res) => {
       .input("expected_delivery_time", sql.NVarChar(5), formattedDeliveryTime)
       .input("requested_price", sql.Decimal(10, 2), requested_price)
       .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
-      .input("status", sql.NVarChar, status || "Pending").query(`
-        INSERT INTO transport_requests (
-          customer_id, vehicle_type, vehicle_size, consignee, consigner,
-          containers_20ft, containers_40ft, total_containers,
-          pickup_location, stuffing_location, delivery_location,
-          commodity, cargo_type, cargo_weight, service_type,
-          service_prices, expected_pickup_date, expected_pickup_time,
-          expected_delivery_date, expected_delivery_time,
-          requested_price, status, no_of_vehicles, created_at
-        )
-        OUTPUT INSERTED.*
-        VALUES (
-          @customer_id, @vehicle_type, @vehicle_size, @consignee, @consigner,
-          @containers_20ft, @containers_40ft, @total_containers,
-          @pickup_location, @stuffing_location, @delivery_location,
-          @commodity, @cargo_type, @cargo_weight, @service_type,
-          @service_prices, @expected_pickup_date, @expected_pickup_time,
-          @expected_delivery_date, @expected_delivery_time,
-          @requested_price, @status, @no_of_vehicles, GETDATE()
-        )
+      .input("status", sql.NVarChar, status || "Pending")
+      .input("vehicle_status", sql.NVarChar, vehicle_status || 'Empty')
+.query(`
+   INSERT INTO transport_requests (
+  customer_id, vehicle_type, vehicle_size, consignee, consigner,
+  containers_20ft, containers_40ft, total_containers,
+  pickup_location, stuffing_location, delivery_location,
+  commodity, cargo_type, cargo_weight, service_type,
+  service_prices, expected_pickup_date, expected_pickup_time,
+  expected_delivery_date, expected_delivery_time,
+  requested_price, status, no_of_vehicles, vehicle_status, created_at
+)
+OUTPUT INSERTED.*
+VALUES (
+  @customer_id, @vehicle_type, @vehicle_size, @consignee, @consigner,
+  @containers_20ft, @containers_40ft, @total_containers,
+  @pickup_location, @stuffing_location, @delivery_location,
+  @commodity, @cargo_type, @cargo_weight, @service_type,
+  @service_prices, @expected_pickup_date, @expected_pickup_time,
+  @expected_delivery_date, @expected_delivery_time,
+  @requested_price, @status, @no_of_vehicles, @vehicle_status, GETDATE()
+)
+
       `);
 
     return res.status(201).json({
@@ -270,6 +274,7 @@ exports.updateRequest = async (req, res) => {
       requested_price,
       no_of_vehicles,
       status,
+      vehicle_status
     } = req.body;
 
     // Parse service_type and service_prices if strings
@@ -369,13 +374,6 @@ exports.updateRequest = async (req, res) => {
       });
     }
 
-    // Debug logging for time values
-    console.log("Time values before query:", {
-      rawPickupTime: expected_pickup_time,
-      formattedPickupTime,
-      rawDeliveryTime: expected_delivery_time,
-      formattedDeliveryTime,
-    });
 
     const result = await pool
       .request()
@@ -409,7 +407,9 @@ exports.updateRequest = async (req, res) => {
       .input("expected_delivery_time", sql.NVarChar(5), formattedDeliveryTime)
       .input("requested_price", sql.Decimal(10, 2), requested_price)
       .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
-      .input("status", sql.NVarChar, status).query(`
+      .input("status", sql.NVarChar, status)
+      .input("vehicle_status", sql.NVarChar, vehicle_status)
+      .query(`
         UPDATE transport_requests 
         SET consignee = @consignee,
             consigner = @consigner,
@@ -433,6 +433,7 @@ exports.updateRequest = async (req, res) => {
             requested_price = @requested_price,
             status = @status,
             no_of_vehicles = @no_of_vehicles,
+            vehicle_status = @vehicle_status,
             updated_at = GETDATE()
         WHERE id = @id
       `);

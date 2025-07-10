@@ -26,6 +26,8 @@ class TransportRequest {
         requested_price, // Added missing field
         no_of_vehicles, // Added missing field
         status,
+   
+  vehicle_status,
         customerId,
       } = requestData;
 
@@ -61,25 +63,28 @@ class TransportRequest {
         .input("expected_delivery_time", sql.Time, expected_delivery_time) // Added time field
         .input("requested_price", sql.Decimal(10, 2), requested_price) // Fixed missing field
         .input("no_of_vehicles", sql.Int, no_of_vehicles || 1) // Added missing field
-        .input("status", sql.NVarChar, status).query(`
-          INSERT INTO transport_requests (
-            customer_id, vehicle_type, vehicle_size, consignee, consigner,
-            containers_20ft, containers_40ft, total_containers,
-            pickup_location, stuffing_location, delivery_location,
-            commodity, cargo_type, cargo_weight, service_type,
-            service_prices, expected_pickup_date, expected_pickup_time,
-            expected_delivery_date, expected_delivery_time,
-            requested_price, no_of_vehicles, status, created_at
-          )
-          VALUES (
-            @customerId, @vehicle_type, @vehicle_size, @consignee, @consigner,
-            @containers_20ft, @containers_40ft, @total_containers,
-            @pickup_location, @stuffing_location, @delivery_location,
-            @commodity, @cargo_type, @cargo_weight, @service_type,
-            @service_prices, @expected_pickup_date, @expected_pickup_time,
-            @expected_delivery_date, @expected_delivery_time,
-            @requested_price, @no_of_vehicles, @status, GETDATE()
-          )
+        .input("status", sql.NVarChar, status)
+        .input("vehicle_status", sql.NVarChar, vehicle_status || 'Empty')
+.query(`
+        INSERT INTO transport_requests (
+  customer_id, vehicle_type, vehicle_size, consignee, consigner,
+  containers_20ft, containers_40ft, total_containers,
+  pickup_location, stuffing_location, delivery_location,
+  commodity, cargo_type, cargo_weight, service_type,
+  service_prices, expected_pickup_date, expected_pickup_time,
+  expected_delivery_date, expected_delivery_time,
+  requested_price, status, no_of_vehicles, vehicle_status, created_at
+)
+OUTPUT INSERTED.*
+VALUES (
+  @customer_id, @vehicle_type, @vehicle_size, @consignee, @consigner,
+  @containers_20ft, @containers_40ft, @total_containers,
+  @pickup_location, @stuffing_location, @delivery_location,
+  @commodity, @cargo_type, @cargo_weight, @service_type,
+  @service_prices, @expected_pickup_date, @expected_pickup_time,
+  @expected_delivery_date, @expected_delivery_time,
+  @requested_price, @status, @no_of_vehicles, @vehicle_status, GETDATE()
+)
         `);
 
       return { success: true };
