@@ -31,10 +31,12 @@ const UserRoutes = require("./routes/UserRoutes");
 const transportRequestRoutes = require("./routes/transportRequestRoutes");
 const transporterRoutes = require("./routes/transporterdetailsroutes");
 const CustomerMasterRoutes = require("./routes/customermasterroutes");
-const transactionRoutes = require("./routes/transactionRoutes"); // Add this line
-const transportlistroutes = require("./routes/transporterlistroutes"); // Add this line
-const serviceroutes = require("./routes/serviceroutes"); // Add this line
-
+const transactionRoutes = require("./routes/transactionRoutes");
+const transportlistroutes = require("./routes/transporterlistroutes");
+const serviceroutes = require("./routes/serviceroutes");
+const vendorRoutes = require("./routes/vendorRoutes"); // Add this line
+const driverRoutes = require("./routes/driverRoutes");
+const locationRoutes = require("./routes/locationroutes"); // Import location routes
 
 // Mount routes with more specific routes first
 app.use("/api/auth", authRoutes);
@@ -42,11 +44,12 @@ app.use("/api/users", UserRoutes);
 app.use("/api/transport-requests", transportRequestRoutes);
 app.use("/api", transporterRoutes);
 app.use("/api/customers", CustomerMasterRoutes);
-app.use("/api/transactions", transactionRoutes); // Add this line
-app.use("/api/transporterlist", transportlistroutes); // Add this line
-app.use("/api/services", serviceroutes); // Add this line
-
-
+app.use("/api/transactions", transactionRoutes);
+app.use("/api/transporterlist", transportlistroutes);
+app.use("/api/services", serviceroutes);
+app.use("/api", vendorRoutes); // Add this line
+app.use("/api", driverRoutes);
+app.use("/api/locations", locationRoutes);
 
 // Add route not found handler
 app.use((req, res, next) => {

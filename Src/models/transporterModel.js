@@ -308,7 +308,8 @@ const transporterModel = {
           cargo_total_weight,
           container_type,
           container_size,
-          vehicle_sequence
+          vehicle_sequence,
+           Vin_no
         } = transporterData;
   
         const result = await pool
@@ -335,6 +336,7 @@ const transporterModel = {
           .input("container_type", sql.NVarChar(50), container_type || null)
           .input("container_size", sql.NVarChar(20), container_size || null)
           .input("vehicle_sequence", sql.Int, vehicle_sequence)
+          .input("vin_no", sql.Int,Vin_no)
           .query(`
             UPDATE transporter_details 
             SET 
@@ -359,7 +361,8 @@ const transporterModel = {
               container_type = @container_type,
               container_size = @container_size,
               updated_at = GETDATE(),
-              vehicle_sequence = @vehicle_sequence  
+              vehicle_sequence = @vehicle_sequence  ,
+              vin_no = @vin_no  
             OUTPUT INSERTED.*
             WHERE id = @id
           `);

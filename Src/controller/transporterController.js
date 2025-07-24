@@ -113,7 +113,8 @@ class TransporterController {
         container_total_weight, // Add this
         cargo_total_weight,    // Add this
         container_type,        // Add this
-        container_size         // Add this
+        container_size  ,
+        vin_no      // Add this
       } = req.body;
 
       // Update transporter details using model
@@ -137,7 +138,8 @@ class TransporterController {
         container_total_weight, // Add this
         cargo_total_weight,    // Add this
         container_type,        // Add this
-        container_size         // Add this
+        container_size,
+        vin_no         // Add this
       });
 
       if (!result) {
