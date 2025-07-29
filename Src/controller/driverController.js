@@ -12,7 +12,6 @@ class DriverController {
     }
   }
 
-  // Get drivers by vendor ID
   static async getDriversByVendorId(req, res) {
     try {
       const { vendorId } = req.params;

@@ -190,6 +190,7 @@ VALUES (
         requested_price, // Added missing field
         no_of_vehicles, // Added missing field
         customerId,
+        
       } = requestData;
 
       const result = await pool
