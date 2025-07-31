@@ -5,10 +5,14 @@ const auth = require("../middlewares/auth");
 
 // Get all drivers
 router.get("/drivers", auth, DriverController.getAllDrivers);
-// In your driver routes file
-router.get('/vendor/:vendorId', DriverController.getDriversByVendorId);
 
-// Get driver by ID
+// Get drivers by vendor ID - This route should come BEFORE the /:id route
+router.get("/drivers/vendor/:vendorId", auth, DriverController.getDriversByVendorId);
+
+// Get vendors for dropdown (if you want a separate endpoint)
+router.get("/drivers/vendors/list", auth, DriverController.getVendors);
+
+// Get driver by ID - This should come after specific routes
 router.get("/drivers/:id", auth, DriverController.getDriverById);
 
 // Create new driver

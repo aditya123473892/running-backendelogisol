@@ -1,12 +1,17 @@
 const { pool, sql } = require("../config/dbconfig");
 
 class DriverModel {
-  // Get all drivers
+  // Get all drivers with vendor information
   static async getAll() {
     try {
       const result = await pool.request().query(`
-        SELECT * FROM DRIVER_MASTER
-        ORDER BY DRIVER_NAME
+        SELECT 
+          d.*,
+          v.VENDOR_NAME,
+          v.VENDOR_CODE
+        FROM DRIVER_MASTER d
+        LEFT JOIN VENDOR_MASTER v ON d.VENDOR_ID = v.VENDOR_ID
+        ORDER BY d.DRIVER_NAME
       `);
       return result.recordset;
     } catch (error) {
@@ -15,15 +20,20 @@ class DriverModel {
     }
   }
 
-  // Get driver by ID
+  // Get driver by ID with vendor information
   static async getById(driverId) {
     try {
       const result = await pool
         .request()
         .input("driver_id", sql.Numeric(18, 0), driverId)
         .query(`
-          SELECT * FROM DRIVER_MASTER
-          WHERE DRIVER_ID = @driver_id
+          SELECT 
+            d.*,
+            v.VENDOR_NAME,
+            v.VENDOR_CODE
+          FROM DRIVER_MASTER d
+          LEFT JOIN VENDOR_MASTER v ON d.VENDOR_ID = v.VENDOR_ID
+          WHERE d.DRIVER_ID = @driver_id
         `);
 
       return result.recordset[0] || null;
@@ -33,11 +43,24 @@ class DriverModel {
     }
   }
 
+  // Get next driver ID (since DRIVER_ID is not auto-increment)
+  static async getNextDriverId() {
+    try {
+      const result = await pool.request().query(`
+        SELECT ISNULL(MAX(DRIVER_ID), 0) + 1 AS next_id FROM DRIVER_MASTER
+      `);
+      return result.recordset[0].next_id;
+    } catch (error) {
+      console.error("Get next driver ID error:", error);
+      throw error;
+    }
+  }
+
   // Create new driver
   static async create(data) {
     try {
       const {
-        vendor_id, // Add this parameter
+        vendor_id, // Required field
         terminal_id,
         driver_name,
         address,
@@ -68,9 +91,21 @@ class DriverModel {
         phone_no
       } = data;
 
+      // Validate required fields
+      if (!vendor_id) {
+        throw new Error("Vendor ID is required");
+      }
+      if (!driver_name) {
+        throw new Error("Driver name is required");
+      }
+
+      // Get next driver ID
+      const nextDriverId = await this.getNextDriverId();
+
       const result = await pool
         .request()
-        .input("vendor_id", sql.Numeric(10, 0), vendor_id) // Add this input parameter
+        .input("driver_id", sql.Numeric(18, 0), nextDriverId)
+        .input("vendor_id", sql.Numeric(10, 0), vendor_id)
         .input("terminal_id", sql.Numeric(18, 0), terminal_id || null)
         .input("driver_name", sql.VarChar(100), driver_name)
         .input("address", sql.VarChar(300), address || null)
@@ -102,7 +137,7 @@ class DriverModel {
         .input("phone_no", sql.VarChar(20), phone_no || null)
         .query(`
           INSERT INTO DRIVER_MASTER (
-            VENDOR_ID, TERMINAL_ID, DRIVER_NAME, ADDRESS, VEHICLE_ID, VEHICLE_NO, 
+            DRIVER_ID, VENDOR_ID, TERMINAL_ID, DRIVER_NAME, ADDRESS, VEHICLE_ID, VEHICLE_NO, 
             CONTACT_NO, MOBILE_NO, EMAIL_ID, BLOOD_GROUP, JOINING_DATE, 
             DL_NO, DL_RENEWABLE_DATE, SALARY, ACTIVE_FLAGE, CREATED_BY, 
             CREATED_ON, IMAGE, BAL_AMT, TRIP_BAL, CLOSE_STATUS, 
@@ -110,17 +145,16 @@ class DriverModel {
             ATTACH_STATUS, DL_DOC, ADDRESS_DOC, EMERG_PHONE, PHONE_NO
           ) 
           VALUES (
-            @vendor_id, @terminal_id, @driver_name, @address, @vehicle_id, @vehicle_no, 
+            @driver_id, @vendor_id, @terminal_id, @driver_name, @address, @vehicle_id, @vehicle_no, 
             @contact_no, @mobile_no, @email_id, @blood_group, @joining_date, 
             @dl_no, @dl_renewable_date, @salary, @active_flage, @created_by, 
             @created_on, @image, @bal_amt, @trip_bal, @close_status, 
             @jo_close_status, @gaurantor, @driver_code, @father_name, 
             @attach_status, @dl_doc, @address_doc, @emerg_phone, @phone_no
-          );
-          SELECT SCOPE_IDENTITY() AS driver_id;
+          )
         `);
 
-      return { success: true, driver_id: result.recordset[0].driver_id };
+      return { success: true, driver_id: nextDriverId };
     } catch (error) {
       console.error("Create driver error:", error);
       throw error;
@@ -131,7 +165,7 @@ class DriverModel {
   static async update(driverId, data) {
     try {
       const {
-        vendor_id, // Add this parameter
+        vendor_id,
         terminal_id,
         driver_name,
         address,
@@ -161,10 +195,15 @@ class DriverModel {
         phone_no
       } = data;
 
+      // Validate required fields
+      if (!driver_name) {
+        throw new Error("Driver name is required");
+      }
+
       await pool
         .request()
         .input("driver_id", sql.Numeric(18, 0), driverId)
-        .input("vendor_id", sql.Numeric(10, 0), vendor_id) // Add this input parameter
+        .input("vendor_id", sql.Numeric(10, 0), vendor_id)
         .input("terminal_id", sql.Numeric(18, 0), terminal_id || null)
         .input("driver_name", sql.VarChar(100), driver_name)
         .input("address", sql.VarChar(300), address || null)
@@ -256,14 +295,35 @@ class DriverModel {
         .request()
         .input("vendor_id", sql.Numeric(10, 0), vendorId)
         .query(`
-          SELECT * FROM DRIVER_MASTER
-          WHERE VENDOR_ID = @vendor_id
-          ORDER BY DRIVER_NAME
+          SELECT 
+            d.*,
+            v.VENDOR_NAME,
+            v.VENDOR_CODE
+          FROM DRIVER_MASTER d
+          LEFT JOIN VENDOR_MASTER v ON d.VENDOR_ID = v.VENDOR_ID
+          WHERE d.VENDOR_ID = @vendor_id
+          ORDER BY d.DRIVER_NAME
         `);
 
       return result.recordset;
     } catch (error) {
       console.error("Get drivers by vendor ID error:", error);
+      throw error;
+    }
+  }
+
+  // Get available vendors for dropdown
+  static async getVendors() {
+    try {
+      const result = await pool.request().query(`
+        SELECT VENDOR_ID, VENDOR_NAME, VENDOR_CODE
+        FROM VENDOR_MASTER
+        WHERE ACTIVE_FLAG = 'Y' OR ACTIVE_FLAG IS NULL
+        ORDER BY VENDOR_NAME
+      `);
+      return result.recordset;
+    } catch (error) {
+      console.error("Get vendors error:", error);
       throw error;
     }
   }

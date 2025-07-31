@@ -1,6 +1,13 @@
 const { pool, sql } = require("../config/dbconfig");
 
 class FleetEquipmentModel {
+  // Helper function to parse date safely
+  static parseDate(dateString) {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
   // Get all fleet equipment
   static async getAll() {
     try {
@@ -57,21 +64,21 @@ class FleetEquipmentModel {
 
       const result = await pool
         .request()
-        .input("equipment_name", sql.VarChar(100), equipment_name)
-        .input("equipment_type", sql.VarChar(50), equipment_type || null)
-        .input("equipment_model", sql.VarChar(50), equipment_model || null)
-        .input("equipment_make", sql.VarChar(50), equipment_make || null)
-        .input("equipment_year", sql.Int, equipment_year || null)
-        .input("equipment_capacity", sql.VarChar(50), equipment_capacity || null)
-        .input("equipment_status", sql.VarChar(20), equipment_status || 'Active')
-        .input("equipment_location", sql.VarChar(100), equipment_location || null)
-        .input("equipment_purchase_date", sql.Date, equipment_purchase_date ? new Date(equipment_purchase_date) : null)
-        .input("equipment_purchase_price", sql.Numeric(18, 2), equipment_purchase_price || null)
-        .input("equipment_current_value", sql.Numeric(18, 2), equipment_current_value || null)
-        .input("equipment_maintenance_schedule", sql.VarChar(100), equipment_maintenance_schedule || null)
-        .input("equipment_last_maintenance_date", sql.Date, equipment_last_maintenance_date ? new Date(equipment_last_maintenance_date) : null)
-        .input("equipment_next_maintenance_date", sql.Date, equipment_next_maintenance_date ? new Date(equipment_next_maintenance_date) : null)
-        .input("equipment_notes", sql.VarChar(500), equipment_notes || null)
+        .input("equipment_name", sql.VarChar(100), equipment_name?.trim())
+        .input("equipment_type", sql.VarChar(50), equipment_type?.trim() || null)
+        .input("equipment_model", sql.VarChar(50), equipment_model?.trim() || null)
+        .input("equipment_make", sql.VarChar(50), equipment_make?.trim() || null)
+        .input("equipment_year", sql.Int, equipment_year ? parseInt(equipment_year) : null)
+        .input("equipment_capacity", sql.VarChar(50), equipment_capacity?.trim() || null)
+        .input("equipment_status", sql.VarChar(20), equipment_status?.trim() || 'Active')
+        .input("equipment_location", sql.VarChar(100), equipment_location?.trim() || null)
+        .input("equipment_purchase_date", sql.Date, this.parseDate(equipment_purchase_date))
+        .input("equipment_purchase_price", sql.Numeric(18, 2), equipment_purchase_price ? parseFloat(equipment_purchase_price) : null)
+        .input("equipment_current_value", sql.Numeric(18, 2), equipment_current_value ? parseFloat(equipment_current_value) : null)
+        .input("equipment_maintenance_schedule", sql.VarChar(100), equipment_maintenance_schedule?.trim() || null)
+        .input("equipment_last_maintenance_date", sql.Date, this.parseDate(equipment_last_maintenance_date))
+        .input("equipment_next_maintenance_date", sql.Date, this.parseDate(equipment_next_maintenance_date))
+        .input("equipment_notes", sql.VarChar(500), equipment_notes?.trim() || null)
         .input("created_by", sql.VarChar(30), created_by || null)
         .input("created_on", sql.DateTime, new Date())
         .query(`
@@ -123,21 +130,21 @@ class FleetEquipmentModel {
       await pool
         .request()
         .input("equipment_id", sql.Numeric(18, 0), equipmentId)
-        .input("equipment_name", sql.VarChar(100), equipment_name)
-        .input("equipment_type", sql.VarChar(50), equipment_type || null)
-        .input("equipment_model", sql.VarChar(50), equipment_model || null)
-        .input("equipment_make", sql.VarChar(50), equipment_make || null)
-        .input("equipment_year", sql.Int, equipment_year || null)
-        .input("equipment_capacity", sql.VarChar(50), equipment_capacity || null)
-        .input("equipment_status", sql.VarChar(20), equipment_status || 'Active')
-        .input("equipment_location", sql.VarChar(100), equipment_location || null)
-        .input("equipment_purchase_date", sql.Date, equipment_purchase_date ? new Date(equipment_purchase_date) : null)
-        .input("equipment_purchase_price", sql.Numeric(18, 2), equipment_purchase_price || null)
-        .input("equipment_current_value", sql.Numeric(18, 2), equipment_current_value || null)
-        .input("equipment_maintenance_schedule", sql.VarChar(100), equipment_maintenance_schedule || null)
-        .input("equipment_last_maintenance_date", sql.Date, equipment_last_maintenance_date ? new Date(equipment_last_maintenance_date) : null)
-        .input("equipment_next_maintenance_date", sql.Date, equipment_next_maintenance_date ? new Date(equipment_next_maintenance_date) : null)
-        .input("equipment_notes", sql.VarChar(500), equipment_notes || null)
+        .input("equipment_name", sql.VarChar(100), equipment_name?.trim())
+        .input("equipment_type", sql.VarChar(50), equipment_type?.trim() || null)
+        .input("equipment_model", sql.VarChar(50), equipment_model?.trim() || null)
+        .input("equipment_make", sql.VarChar(50), equipment_make?.trim() || null)
+        .input("equipment_year", sql.Int, equipment_year ? parseInt(equipment_year) : null)
+        .input("equipment_capacity", sql.VarChar(50), equipment_capacity?.trim() || null)
+        .input("equipment_status", sql.VarChar(20), equipment_status?.trim() || 'Active')
+        .input("equipment_location", sql.VarChar(100), equipment_location?.trim() || null)
+        .input("equipment_purchase_date", sql.Date, this.parseDate(equipment_purchase_date))
+        .input("equipment_purchase_price", sql.Numeric(18, 2), equipment_purchase_price ? parseFloat(equipment_purchase_price) : null)
+        .input("equipment_current_value", sql.Numeric(18, 2), equipment_current_value ? parseFloat(equipment_current_value) : null)
+        .input("equipment_maintenance_schedule", sql.VarChar(100), equipment_maintenance_schedule?.trim() || null)
+        .input("equipment_last_maintenance_date", sql.Date, this.parseDate(equipment_last_maintenance_date))
+        .input("equipment_next_maintenance_date", sql.Date, this.parseDate(equipment_next_maintenance_date))
+        .input("equipment_notes", sql.VarChar(500), equipment_notes?.trim() || null)
         .query(`
           UPDATE FLEET_EQUIPMENT_MASTER SET
             EQUIPMENT_NAME = @equipment_name,
