@@ -37,6 +37,7 @@ const serviceroutes = require("./routes/serviceroutes");
 const vendorRoutes = require("./routes/vendorRoutes"); // Add this line
 const driverRoutes = require("./routes/driverRoutes");
 const locationRoutes = require("./routes/locationroutes"); // Import location routes
+const equipmentRoutes = require("./routes/equipmentroutes"); // Import equipment routes
 
 // Mount routes with more specific routes first
 app.use("/api/auth", authRoutes);
@@ -50,6 +51,7 @@ app.use("/api/services", serviceroutes);
 app.use("/api", vendorRoutes); // Add this line
 app.use("/api", driverRoutes);
 app.use("/api/locations", locationRoutes);
+app.use("/api", equipmentRoutes);
 
 // Add route not found handler
 app.use((req, res, next) => {
@@ -68,7 +70,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT 
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
