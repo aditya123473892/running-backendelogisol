@@ -37,7 +37,7 @@ const serviceroutes = require("./routes/serviceroutes");
 const vendorRoutes = require("./routes/vendorRoutes"); // Add this line
 const driverRoutes = require("./routes/driverRoutes");
 const locationRoutes = require("./routes/locationroutes"); // Import location routes
-const equipmentRoutes = require("./routes/equipmentroutes"); // Import equipment routes
+const equipmentRoutes = require("./routes/equipmentRoutes"); // Import equipment routes
 
 // Mount routes with more specific routes first
 app.use("/api/auth", authRoutes);
