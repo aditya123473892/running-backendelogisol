@@ -38,6 +38,7 @@ const vendorRoutes = require("./routes/vendorRoutes"); // Add this line
 const driverRoutes = require("./routes/driverRoutes");
 const locationRoutes = require("./routes/locationroutes"); // Import location routes
 const equipmentRoutes = require("./routes/equipmentRoutes"); // Import equipment routes
+const vehiicleRoutes = require("./routes/vehicleRoutes"); // Import vehicle routes
 
 // Mount routes with more specific routes first
 app.use("/api/auth", authRoutes);
@@ -52,6 +53,7 @@ app.use("/api", vendorRoutes); // Add this line
 app.use("/api", driverRoutes);
 app.use("/api/locations", locationRoutes);
 app.use("/api", equipmentRoutes);
+app.use("/api", vehiicleRoutes); // Add vehicle routes
 
 // Add route not found handler
 app.use((req, res, next) => {
