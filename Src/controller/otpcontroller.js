@@ -3,14 +3,7 @@ const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const { pool, sql } = require("../config/dbconfig");
 const { saveOtp, getOtp, deleteOtp } = require("../models/otpmodels");
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const transporter = require("../config/Mailer");
 
 // Step 1: Validate password → send OTP
 exports.sendOtpAfterPassword = async (req, res) => {
@@ -56,9 +49,12 @@ exports.sendOtpAfterPassword = async (req, res) => {
 // Step 2: Verify OTP → generate JWT
 exports.verifyOtpAndLogin = async (req, res) => {
   const { email, otp } = req.body;
-  
-  console.log("Received OTP verification request:", { email, otpLength: otp?.length });
-  
+
+  console.log("Received OTP verification request:", {
+    email,
+    otpLength: otp?.length,
+  });
+
   // Validate input
   if (!email || !otp) {
     console.log("Missing email or OTP");
@@ -66,27 +62,34 @@ exports.verifyOtpAndLogin = async (req, res) => {
   }
 
   const data = getOtp(email);
-  console.log("OTP data from store:", data ? { hasData: true, expiresAt: new Date(data.expiresAt) } : null);
-  
+  console.log(
+    "OTP data from store:",
+    data ? { hasData: true, expiresAt: new Date(data.expiresAt) } : null
+  );
+
   if (!data) {
     console.log("OTP not found for email:", email);
-    return res.status(400).json({ message: "OTP not found or expired. Please request a new OTP" });
+    return res
+      .status(400)
+      .json({ message: "OTP not found or expired. Please request a new OTP" });
   }
-  
+
   if (Date.now() > data.expiresAt) {
     console.log("OTP expired for email:", email);
     deleteOtp(email);
-    return res.status(400).json({ message: "OTP expired. Please request a new OTP" });
+    return res
+      .status(400)
+      .json({ message: "OTP expired. Please request a new OTP" });
   }
 
   // Ensure both OTPs are strings and trimmed for comparison
   const receivedOtp = String(otp).trim();
   const storedOtp = String(data.otp).trim();
-  
-  console.log("OTP comparison:", { 
-    receivedLength: receivedOtp.length, 
+
+  console.log("OTP comparison:", {
+    receivedLength: receivedOtp.length,
     storedLength: storedOtp.length,
-    match: receivedOtp === storedOtp 
+    match: receivedOtp === storedOtp,
   });
 
   if (receivedOtp !== storedOtp) {
