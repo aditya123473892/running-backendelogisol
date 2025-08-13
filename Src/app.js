@@ -15,6 +15,7 @@ app.use(
       "http://localhost:3000",
       "https://elogisol-d7em.vercel.app",
       "http://10.0.2.2:4000",
+      https://elogisolfront2.vercel.app/,
       null,
     ],
     credentials: true,
