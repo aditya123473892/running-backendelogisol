@@ -20,15 +20,15 @@ class TransportRequest {
         containers_40ft,
         total_containers,
         expected_pickup_date,
-        expected_pickup_time, // Added missing field
+        expected_pickup_time,
         expected_delivery_date,
-        expected_delivery_time, // Added missing field
-        requested_price, // Added missing field
-        no_of_vehicles, // Added missing field
+        expected_delivery_time,
+        requested_price,
+        no_of_vehicles,
         status,
-   
-  vehicle_status,
+        vehicle_status,
         customerId,
+        SHIPA_NO, // Added new field
       } = requestData;
 
       const result = await pool
@@ -58,33 +58,34 @@ class TransportRequest {
         .input("containers_40ft", sql.Int, containers_40ft || 0)
         .input("total_containers", sql.Int, total_containers)
         .input("expected_pickup_date", sql.Date, expected_pickup_date)
-        .input("expected_pickup_time", sql.Time, expected_pickup_time) // Added time field
+        .input("expected_pickup_time", sql.Time, expected_pickup_time)
         .input("expected_delivery_date", sql.Date, expected_delivery_date)
-        .input("expected_delivery_time", sql.Time, expected_delivery_time) // Added time field
-        .input("requested_price", sql.Decimal(10, 2), requested_price) // Fixed missing field
-        .input("no_of_vehicles", sql.Int, no_of_vehicles || 1) // Added missing field
+        .input("expected_delivery_time", sql.Time, expected_delivery_time)
+        .input("requested_price", sql.Decimal(10, 2), requested_price)
+        .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
         .input("status", sql.NVarChar, status)
-        .input("vehicle_status", sql.NVarChar, vehicle_status || 'Empty')
-.query(`
+        .input("vehicle_status", sql.NVarChar, vehicle_status || "Empty")
+        .input("SHIPA_NO", sql.NVarChar, SHIPA_NO) // Added new field
+        .query(`
         INSERT INTO transport_requests (
-  customer_id, vehicle_type, vehicle_size, consignee, consigner,
-  containers_20ft, containers_40ft, total_containers,
-  pickup_location, stuffing_location, delivery_location,
-  commodity, cargo_type, cargo_weight, service_type,
-  service_prices, expected_pickup_date, expected_pickup_time,
-  expected_delivery_date, expected_delivery_time,
-  requested_price, status, no_of_vehicles, vehicle_status, created_at
-)
-OUTPUT INSERTED.*
-VALUES (
-  @customer_id, @vehicle_type, @vehicle_size, @consignee, @consigner,
-  @containers_20ft, @containers_40ft, @total_containers,
-  @pickup_location, @stuffing_location, @delivery_location,
-  @commodity, @cargo_type, @cargo_weight, @service_type,
-  @service_prices, @expected_pickup_date, @expected_pickup_time,
-  @expected_delivery_date, @expected_delivery_time,
-  @requested_price, @status, @no_of_vehicles, @vehicle_status, GETDATE()
-)
+          customer_id, vehicle_type, vehicle_size, consignee, consigner,
+          containers_20ft, containers_40ft, total_containers,
+          pickup_location, stuffing_location, delivery_location,
+          commodity, cargo_type, cargo_weight, service_type,
+          service_prices, expected_pickup_date, expected_pickup_time,
+          expected_delivery_date, expected_delivery_time,
+          requested_price, status, no_of_vehicles, vehicle_status, SHIPA_NO, created_at
+        )
+        OUTPUT INSERTED.*
+        VALUES (
+          @customerId, @vehicle_type, @vehicle_size, @consignee, @consigner,
+          @containers_20ft, @containers_40ft, @total_containers,
+          @pickup_location, @stuffing_location, @delivery_location,
+          @commodity, @cargo_type, @cargo_weight, @service_type,
+          @service_prices, @expected_pickup_date, @expected_pickup_time,
+          @expected_delivery_date, @expected_delivery_time,
+          @requested_price, @status, @no_of_vehicles, @vehicle_status, @SHIPA_NO, GETDATE()
+        )
         `);
 
       return { success: true };
@@ -184,13 +185,13 @@ VALUES (
         containers_40ft,
         total_containers,
         expected_pickup_date,
-        expected_pickup_time, // Added missing field
+        expected_pickup_time,
         expected_delivery_date,
-        expected_delivery_time, // Added missing field
-        requested_price, // Added missing field
-        no_of_vehicles, // Added missing field
+        expected_delivery_time,
+        requested_price,
+        no_of_vehicles,
         customerId,
-        
+        SHIPA_NO, // Added new field
       } = requestData;
 
       const result = await pool
@@ -221,11 +222,12 @@ VALUES (
         .input("containers_40ft", sql.Int, containers_40ft)
         .input("total_containers", sql.Int, total_containers)
         .input("expected_pickup_date", sql.Date, expected_pickup_date)
-        .input("expected_pickup_time", sql.Time, expected_pickup_time) // Added time field
+        .input("expected_pickup_time", sql.Time, expected_pickup_time)
         .input("expected_delivery_date", sql.Date, expected_delivery_date)
-        .input("expected_delivery_time", sql.Time, expected_delivery_time) // Added time field
-        .input("requested_price", sql.Decimal(10, 2), requested_price) // Added missing field
-        .input("no_of_vehicles", sql.Int, no_of_vehicles || 1) // Added missing field
+        .input("expected_delivery_time", sql.Time, expected_delivery_time)
+        .input("requested_price", sql.Decimal(10, 2), requested_price)
+        .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
+        .input("SHIPA_NO", sql.NVarChar, SHIPA_NO) // Added new field
         .query(`
           UPDATE transport_requests
           SET 
@@ -250,6 +252,7 @@ VALUES (
             expected_delivery_time = @expected_delivery_time,
             requested_price = @requested_price,
             no_of_vehicles = @no_of_vehicles,
+            SHIPA_NO = @SHIPA_NO,
             updated_at = GETDATE()
           WHERE id = @id AND customer_id = @customerId
         `);

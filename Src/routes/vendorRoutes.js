@@ -9,11 +9,28 @@ router.get("/vendors", auth, VendorController.getAllVendors);
 // Get vendor by ID
 router.get("/vendors/:id", auth, VendorController.getVendorById);
 
-// Create new vendor
-router.post("/vendors", auth, VendorController.createVendor);
+// Get vendor document (for viewing/downloading documents)
+router.get(
+  "/vendors/:id/document/:documentNumber",
+  auth,
+  VendorController.getVendorDocument
+);
 
-// Update vendor
-router.put("/vendors/:id", auth, VendorController.updateVendor);
+// Create new vendor with documents
+router.post(
+  "/vendors",
+  auth,
+  VendorController.uploadDocuments,
+  VendorController.createVendor
+);
+
+// Update vendor with documents
+router.put(
+  "/vendors/:id",
+  auth,
+  VendorController.uploadDocuments,
+  VendorController.updateVendor
+);
 
 // Delete vendor
 router.delete("/vendors/:id", auth, VendorController.deleteVendor);

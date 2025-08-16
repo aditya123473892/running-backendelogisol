@@ -27,7 +27,8 @@ exports.createRequest = async (req, res) => {
       requested_price,
       no_of_vehicles,
       status,
-        vehicle_status
+      vehicle_status,
+      SHIPA_NO, // Added new field
     } = req.body;
 
     // Validate required date and time fields
@@ -42,6 +43,14 @@ exports.createRequest = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Expected delivery date and time are required",
+      });
+    }
+
+    // Validate SHIPA_NO if required
+    if (!SHIPA_NO || SHIPA_NO.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "SHIPA_NO is required",
       });
     }
 
@@ -131,8 +140,6 @@ exports.createRequest = async (req, res) => {
       });
     }
 
-    // Debug logging for time values
-
     const result = await pool
       .request()
       .input("customer_id", sql.Int, req.user.id)
@@ -166,28 +173,28 @@ exports.createRequest = async (req, res) => {
       .input("requested_price", sql.Decimal(10, 2), requested_price)
       .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
       .input("status", sql.NVarChar, status || "Pending")
-      .input("vehicle_status", sql.NVarChar, vehicle_status || 'Empty')
-.query(`
-   INSERT INTO transport_requests (
-  customer_id, vehicle_type, vehicle_size, consignee, consigner,
-  containers_20ft, containers_40ft, total_containers,
-  pickup_location, stuffing_location, delivery_location,
-  commodity, cargo_type, cargo_weight, service_type,
-  service_prices, expected_pickup_date, expected_pickup_time,
-  expected_delivery_date, expected_delivery_time,
-  requested_price, status, no_of_vehicles, vehicle_status, created_at
-)
-OUTPUT INSERTED.*
-VALUES (
-  @customer_id, @vehicle_type, @vehicle_size, @consignee, @consigner,
-  @containers_20ft, @containers_40ft, @total_containers,
-  @pickup_location, @stuffing_location, @delivery_location,
-  @commodity, @cargo_type, @cargo_weight, @service_type,
-  @service_prices, @expected_pickup_date, @expected_pickup_time,
-  @expected_delivery_date, @expected_delivery_time,
-  @requested_price, @status, @no_of_vehicles, @vehicle_status, GETDATE()
-)
-
+      .input("vehicle_status", sql.NVarChar, vehicle_status || "Empty")
+      .input("SHIPA_NO", sql.NVarChar, SHIPA_NO) // Added new field
+      .query(`
+        INSERT INTO transport_requests (
+          customer_id, vehicle_type, vehicle_size, consignee, consigner,
+          containers_20ft, containers_40ft, total_containers,
+          pickup_location, stuffing_location, delivery_location,
+          commodity, cargo_type, cargo_weight, service_type,
+          service_prices, expected_pickup_date, expected_pickup_time,
+          expected_delivery_date, expected_delivery_time,
+          requested_price, status, no_of_vehicles, vehicle_status, SHIPA_NO, created_at
+        )
+        OUTPUT INSERTED.*
+        VALUES (
+          @customer_id, @vehicle_type, @vehicle_size, @consignee, @consigner,
+          @containers_20ft, @containers_40ft, @total_containers,
+          @pickup_location, @stuffing_location, @delivery_location,
+          @commodity, @cargo_type, @cargo_weight, @service_type,
+          @service_prices, @expected_pickup_date, @expected_pickup_time,
+          @expected_delivery_date, @expected_delivery_time,
+          @requested_price, @status, @no_of_vehicles, @vehicle_status, @SHIPA_NO, GETDATE()
+        )
       `);
 
     return res.status(201).json({
@@ -248,6 +255,7 @@ exports.getMyRequests = async (req, res) => {
     });
   }
 };
+
 exports.updateRequest = async (req, res) => {
   try {
     const requestId = req.params.id;
@@ -274,7 +282,8 @@ exports.updateRequest = async (req, res) => {
       requested_price,
       no_of_vehicles,
       status,
-      vehicle_status
+      vehicle_status,
+      SHIPA_NO, // Added new field
     } = req.body;
 
     // Parse service_type and service_prices if strings
@@ -374,7 +383,6 @@ exports.updateRequest = async (req, res) => {
       });
     }
 
-
     const result = await pool
       .request()
       .input("id", sql.Int, requestId)
@@ -409,6 +417,7 @@ exports.updateRequest = async (req, res) => {
       .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
       .input("status", sql.NVarChar, status)
       .input("vehicle_status", sql.NVarChar, vehicle_status)
+      .input("SHIPA_NO", sql.NVarChar, SHIPA_NO) // Added new field
       .query(`
         UPDATE transport_requests 
         SET consignee = @consignee,
@@ -434,6 +443,7 @@ exports.updateRequest = async (req, res) => {
             status = @status,
             no_of_vehicles = @no_of_vehicles,
             vehicle_status = @vehicle_status,
+            SHIPA_NO = @SHIPA_NO,
             updated_at = GETDATE()
         WHERE id = @id
       `);
