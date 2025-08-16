@@ -7,9 +7,9 @@ const transporterModel = {
       const result = await pool
         .request()
         .input("request_id", sql.Int, requestId).query(`
-          SELECT * FROM transporter_details 
+           SELECT  distinct transporter_name , vehicle_number,driver_name,driver_contact,license_number,license_expiry FROM transporter_details 
           WHERE request_id = @request_id
-          ORDER BY vehicle_sequence
+     
         `);
       return result.recordset;
     } catch (error) {
