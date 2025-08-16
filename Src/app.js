@@ -3,19 +3,17 @@ const path = require("path");
 const cors = require("cors");
 const { connectDB } = require("./config/dbconfig");
 
-// Load environment variables
 require("dotenv").config({ path: path.join(__dirname, "../env") });
 
 const app = express();
 
-// CORS configuration - place this before routes
 app.use(
   cors({
     origin: [
       "http://localhost:3000",
       "https://elogisol-d7em.vercel.app",
       "http://10.0.2.2:4000",
-      "https://elogisolfront2.vercel.app",
+      "https://transplus.vercel.app/login",
       null,
     ],
     credentials: true,
@@ -24,11 +22,9 @@ app.use(
   })
 );
 
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Connect to database
 connectDB();
 
 // Routes
@@ -87,7 +83,7 @@ app.listen(PORT, () => {
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled Promise Rejection:", err);
-  // Close server & exit process
+
   process.exit(1);
 });
 
