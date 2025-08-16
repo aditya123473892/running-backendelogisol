@@ -15,6 +15,7 @@ app.use(
       "http://10.0.2.2:4000",
       "https://transplus.vercel.app",
       "https://elogisolfront2.vercel.app",
+      "https://transplus.vercel.app",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
