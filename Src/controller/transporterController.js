@@ -61,7 +61,7 @@ class TransporterController {
           driver_contact,
           license_number,
           license_expiry,
-         
+
           additional_charges,
           service_charges,
           total_charge,
@@ -100,7 +100,7 @@ class TransporterController {
         driver_contact,
         license_number,
         license_expiry,
-    
+
         additional_charges,
         service_charges, // Add this to accept service charges
         total_charge,
@@ -108,13 +108,13 @@ class TransporterController {
         line,
         seal_no,
         number_of_containers,
-        seal1,                 // Add this
-        seal2,                 // Add this
+        seal1, // Add this
+        seal2, // Add this
         container_total_weight, // Add this
-        cargo_total_weight,    // Add this
-        container_type,        // Add this
-        container_size  ,
-        vin_no      // Add this
+        cargo_total_weight, // Add this
+        container_type, // Add this
+        container_size,
+        vin_no, // Add this
       } = req.body;
 
       // Update transporter details using model
@@ -125,7 +125,7 @@ class TransporterController {
         driver_contact,
         license_number,
         license_expiry,
-    
+
         additional_charges,
         service_charges, // Pass service charges to model
         total_charge,
@@ -133,13 +133,13 @@ class TransporterController {
         line,
         seal_no,
         number_of_containers,
-        seal1,                 // Add this
-        seal2,                 // Add this
+        seal1, // Add this
+        seal2, // Add this
         container_total_weight, // Add this
-        cargo_total_weight,    // Add this
-        container_type,        // Add this
+        cargo_total_weight, // Add this
+        container_type, // Add this
         container_size,
-        vin_no         // Add this
+        vin_no, // Add this
       });
 
       if (!result) {
@@ -255,42 +255,42 @@ class TransporterController {
   static async updateContainerDetails(req, res) {
     try {
       const { id } = req.params;
-      const { 
-        container_no, 
-        line, 
-        seal_no, 
+      const {
+        container_no,
+        line,
+        seal_no,
         number_of_containers,
-        seal1,                 // Add this
-        seal2,                 // Add this
+        seal1, // Add this
+        seal2, // Add this
         container_total_weight, // Add this
-        cargo_total_weight,    // Add this
-        container_type,        // Add this
-        container_size,        // Add this
-        vehicle_number         // Add this
+        cargo_total_weight, // Add this
+        container_type, // Add this
+        container_size, // Add this
+        vehicle_number, // Add this
       } = req.body;
-  
+
       // Update container details using model
       const result = await transporterModel.updateContainerDetails(id, {
         container_no,
         line,
         seal_no,
         number_of_containers,
-        seal1,                 // Add this
-        seal2,                 // Add this
+        seal1, // Add this
+        seal2, // Add this
         container_total_weight, // Add this
-        cargo_total_weight,    // Add this
-        container_type,        // Add this
-        container_size,        // Add this
-        vehicle_number         // Add this
+        cargo_total_weight, // Add this
+        container_type, // Add this
+        container_size, // Add this
+        vehicle_number, // Add this
       });
-  
+
       if (!result) {
         return res.status(404).json({
           success: false,
           message: "Transporter details not found",
         });
       }
-  
+
       return res.status(200).json({
         success: true,
         message: "Container details updated successfully",
@@ -363,7 +363,11 @@ class TransporterController {
         });
       }
 
-      if (!containers || !Array.isArray(containers) || containers.length === 0) {
+      if (
+        !containers ||
+        !Array.isArray(containers) ||
+        containers.length === 0
+      ) {
         return res.status(400).json({
           success: false,
           message: "Containers array is required",
@@ -407,7 +411,7 @@ class TransporterController {
   static async deleteContainer(req, res) {
     try {
       const { id } = req.params;
-      
+
       if (!id) {
         return res.status(400).json({
           success: false,
@@ -434,7 +438,8 @@ class TransporterController {
       return res.status(500).json({
         success: false,
         message: "Error deleting container",
-        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }

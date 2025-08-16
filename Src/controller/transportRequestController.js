@@ -1,7 +1,6 @@
 const TransportRequest = require("../models/TransportRequestModel");
 const { pool, sql } = require("../config/dbconfig");
 
-// Improved createRequest function with better time handling
 exports.createRequest = async (req, res) => {
   try {
     const {
@@ -31,18 +30,17 @@ exports.createRequest = async (req, res) => {
       SHIPA_NO, // Added new field
     } = req.body;
 
-    // Validate required date and time fields
-    if (!expected_pickup_date || !expected_pickup_time) {
+    if (!expected_pickup_date) {
       return res.status(400).json({
         success: false,
-        message: "Expected pickup date and time are required",
+        message: "Expected pickup date is required",
       });
     }
 
-    if (!expected_delivery_date || !expected_delivery_time) {
+    if (!expected_delivery_date) {
       return res.status(400).json({
         success: false,
-        message: "Expected delivery date and time are required",
+        message: "Expected delivery date is required",
       });
     }
 
@@ -54,52 +52,7 @@ exports.createRequest = async (req, res) => {
       });
     }
 
-    // Format time to HH:MM for nvarchar(5)
-    const formatTimeForSQL = (timeString, fieldName) => {
-      if (
-        !timeString ||
-        typeof timeString !== "string" ||
-        timeString.trim() === ""
-      ) {
-        throw new Error(`Invalid ${fieldName} format. Expected HH:MM`);
-      }
-
-      const cleanTime = timeString.trim();
-
-      // Accept HH:MM
-      if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(cleanTime)) {
-        return cleanTime;
-      }
-
-      // Accept HH:MM:SS or HH:MM:SS.nnnnnnn and extract HH:MM
-      if (
-        /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?(\.\d{1,7})?$/.test(
-          cleanTime
-        )
-      ) {
-        return cleanTime.split(":").slice(0, 2).join(":");
-      }
-
-      throw new Error(`Invalid ${fieldName} format. Expected HH:MM`);
-    };
-
     let formattedPickupTime, formattedDeliveryTime;
-
-    try {
-      formattedPickupTime = formatTimeForSQL(
-        expected_pickup_time,
-        "pickup time"
-      );
-      formattedDeliveryTime = formatTimeForSQL(
-        expected_delivery_time,
-        "delivery time"
-      );
-    } catch (timeError) {
-      return res.status(400).json({
-        success: false,
-        message: timeError.message,
-      });
-    }
 
     // Parse service_type and service_prices if strings
     let parsedServiceType = service_type || ["Transport"];
@@ -331,58 +284,6 @@ exports.updateRequest = async (req, res) => {
       }
     }
 
-    // Format time to HH:MM for nvarchar(5)
-    const formatTimeForSQL = (timeString, fieldName) => {
-      if (
-        !timeString ||
-        typeof timeString !== "string" ||
-        timeString.trim() === ""
-      ) {
-        return null; // Allow null for nullable fields
-      }
-
-      const cleanTime = timeString.trim();
-
-      // Accept HH:MM
-      if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(cleanTime)) {
-        return cleanTime;
-      }
-
-      // Accept HH:MM:SS or HH:MM:SS.nnnnnnn and extract HH:MM
-      if (
-        /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?(\.\d{1,7})?$/.test(
-          cleanTime
-        )
-      ) {
-        return cleanTime.split(":").slice(0, 2).join(":");
-      }
-
-      throw new Error(`Invalid ${fieldName} format. Expected HH:MM`);
-    };
-
-    let formattedPickupTime = null;
-    let formattedDeliveryTime = null;
-
-    try {
-      if (expected_pickup_time) {
-        formattedPickupTime = formatTimeForSQL(
-          expected_pickup_time,
-          "pickup time"
-        );
-      }
-      if (expected_delivery_time) {
-        formattedDeliveryTime = formatTimeForSQL(
-          expected_delivery_time,
-          "delivery time"
-        );
-      }
-    } catch (timeError) {
-      return res.status(400).json({
-        success: false,
-        message: timeError.message,
-      });
-    }
-
     const result = await pool
       .request()
       .input("id", sql.Int, requestId)
@@ -436,9 +337,9 @@ exports.updateRequest = async (req, res) => {
             containers_40ft = @containers_40ft,
             total_containers = @total_containers,
             expected_pickup_date = @expected_pickup_date,
-            expected_pickup_time = @expected_pickup_time,
+  
             expected_delivery_date = @expected_delivery_date,
-            expected_delivery_time = @expected_delivery_time,
+            
             requested_price = @requested_price,
             status = @status,
             no_of_vehicles = @no_of_vehicles,

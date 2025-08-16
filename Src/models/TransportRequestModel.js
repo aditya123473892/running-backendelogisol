@@ -247,9 +247,9 @@ class TransportRequest {
             containers_40ft = @containers_40ft,
             total_containers = @total_containers,
             expected_pickup_date = @expected_pickup_date,
-            expected_pickup_time = @expected_pickup_time,
+         
             expected_delivery_date = @expected_delivery_date,
-            expected_delivery_time = @expected_delivery_time,
+          
             requested_price = @requested_price,
             no_of_vehicles = @no_of_vehicles,
             SHIPA_NO = @SHIPA_NO,
