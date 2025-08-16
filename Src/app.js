@@ -13,7 +13,7 @@ app.use(
       "http://localhost:3000",
       "https://elogisol-d7em.vercel.app",
       "http://10.0.2.2:4000",
-      "https://transplus.vercel.app/login",
+      "https://transplus.vercel.app",
       null,
     ],
     credentials: true,
