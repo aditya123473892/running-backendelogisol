@@ -20,9 +20,9 @@ exports.createRequest = async (req, res) => {
       containers_40ft,
       total_containers,
       expected_pickup_date,
-      expected_pickup_time,
+
       expected_delivery_date,
-      expected_delivery_time,
+
       requested_price,
       no_of_vehicles,
       status,
@@ -120,9 +120,9 @@ exports.createRequest = async (req, res) => {
         JSON.stringify(parsedServicePrices)
       )
       .input("expected_pickup_date", sql.Date, pickupDate)
-      .input("expected_pickup_time", sql.NVarChar(5), formattedPickupTime)
+
       .input("expected_delivery_date", sql.Date, deliveryDate)
-      .input("expected_delivery_time", sql.NVarChar(5), formattedDeliveryTime)
+
       .input("requested_price", sql.Decimal(10, 2), requested_price)
       .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
       .input("status", sql.NVarChar, status || "Pending")
@@ -134,8 +134,8 @@ exports.createRequest = async (req, res) => {
           containers_20ft, containers_40ft, total_containers,
           pickup_location, stuffing_location, delivery_location,
           commodity, cargo_type, cargo_weight, service_type,
-          service_prices, expected_pickup_date, expected_pickup_time,
-          expected_delivery_date, expected_delivery_time,
+          service_prices, expected_pickup_date,
+          expected_delivery_date, 
           requested_price, status, no_of_vehicles, vehicle_status, SHIPA_NO, created_at
         )
         OUTPUT INSERTED.*
@@ -144,8 +144,8 @@ exports.createRequest = async (req, res) => {
           @containers_20ft, @containers_40ft, @total_containers,
           @pickup_location, @stuffing_location, @delivery_location,
           @commodity, @cargo_type, @cargo_weight, @service_type,
-          @service_prices, @expected_pickup_date, @expected_pickup_time,
-          @expected_delivery_date, @expected_delivery_time,
+          @service_prices, @expected_pickup_date,
+          @expected_delivery_date,
           @requested_price, @status, @no_of_vehicles, @vehicle_status, @SHIPA_NO, GETDATE()
         )
       `);
@@ -229,9 +229,9 @@ exports.updateRequest = async (req, res) => {
       containers_40ft,
       total_containers,
       expected_pickup_date,
-      expected_pickup_time,
+
       expected_delivery_date,
-      expected_delivery_time,
+
       requested_price,
       no_of_vehicles,
       status,
@@ -311,9 +311,9 @@ exports.updateRequest = async (req, res) => {
       .input("containers_40ft", sql.Int, containers_40ft || 0)
       .input("total_containers", sql.Int, total_containers || 0)
       .input("expected_pickup_date", sql.Date, pickupDate)
-      .input("expected_pickup_time", sql.NVarChar(5), formattedPickupTime)
+
       .input("expected_delivery_date", sql.Date, deliveryDate)
-      .input("expected_delivery_time", sql.NVarChar(5), formattedDeliveryTime)
+
       .input("requested_price", sql.Decimal(10, 2), requested_price)
       .input("no_of_vehicles", sql.Int, no_of_vehicles || 1)
       .input("status", sql.NVarChar, status)
