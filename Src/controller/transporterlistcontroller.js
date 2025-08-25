@@ -1,7 +1,5 @@
 const TransporterlistModel = require("../models/Transporterlistmodal");
 
-
-
 const TransporterlistController = {
   // GET /api/transporters
   async getAll(req, res) {
@@ -9,7 +7,10 @@ const TransporterlistController = {
       const data = await TransporterlistModel.getAllTransporters();
       res.status(200).json(data);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch transporters", error: error.message });
+      res.status(500).json({
+        message: "Failed to fetch transporters",
+        error: error.message,
+      });
     }
   },
 
@@ -17,13 +18,17 @@ const TransporterlistController = {
   async getById(req, res) {
     const { id } = req.params;
     try {
-      const transporter = await TransporterlistModel.getTransporterById(parseInt(id));
+      const transporter = await TransporterlistModel.getTransporterById(
+        parseInt(id)
+      );
       if (!transporter) {
         return res.status(404).json({ message: "Transporter not found" });
       }
       res.status(200).json(transporter);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch transporter", error: error.message });
+      res
+        .status(500)
+        .json({ message: "Failed to fetch transporter", error: error.message });
     }
   },
 
@@ -31,15 +36,19 @@ const TransporterlistController = {
   async getByEmail(req, res) {
     const { email } = req.params;
     try {
-      const transporter = await TransporterlistModel.getTransporterByEmail(email);
+      const transporter = await TransporterlistModel.getTransporterByEmail(
+        email
+      );
       if (!transporter) {
         return res.status(404).json({ message: "Transporter not found" });
       }
       res.status(200).json(transporter);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch transporter", error: error.message });
+      res
+        .status(500)
+        .json({ message: "Failed to fetch transporter", error: error.message });
     }
-  }
+  },
 };
 
 module.exports = TransporterlistController;
