@@ -38,6 +38,12 @@ router.get(
   TransporterController.getContainersByVehicleNumber
 );
 
+router.get(
+  "/transport-requests/:requestId/containers",
+  auth,
+  TransporterController.getContainersByRequestId
+);
+
 // Add multiple containers to a vehicle
 router.post(
   "/transport-requests/:requestId/vehicle/:vehicleNumber/containers",

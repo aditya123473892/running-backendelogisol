@@ -444,3 +444,23 @@ exports.updateRequestStatus = async (req, res) => {
     });
   }
 };
+
+exports.getcontainerbyrequestid = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const containers = await TransportRequest.getContainersByRequestId(
+      requestId
+    );
+    res.status(200).json({
+      success: true,
+      containers,
+    });
+  } catch (error) {
+    console.error("Get containers by request ID error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching containers",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};

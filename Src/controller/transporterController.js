@@ -29,9 +29,7 @@ class TransporterController {
         !transporter_name ||
         !vehicle_number ||
         !driver_name ||
-        !driver_contact ||
-        !license_number ||
-        !license_expiry
+        !driver_contact
         // !base_charge - Remove this line
       ) {
         return res.status(400).json({
@@ -339,6 +337,44 @@ class TransporterController {
       });
     } catch (error) {
       console.error("Get containers by vehicle number error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching containers",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+
+  static async getContainersByRequestId(req, res) {
+    try {
+      const requestId = parseInt(req.params.requestId);
+
+      // Validate input
+      if (!requestId) {
+        return res.status(400).json({
+          success: false,
+          message: "Request ID is required",
+        });
+      }
+
+      const containers = await transporterModel.getcontainerbyrequestid(
+        requestId
+      );
+
+      if (!containers || containers.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No containers found for this request",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: containers,
+      });
+    } catch (error) {
+      console.error("Get containers by request ID error:", error);
       return res.status(500).json({
         success: false,
         message: "Error fetching containers",
