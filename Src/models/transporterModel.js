@@ -176,7 +176,7 @@ const transporterModel = {
             VALUES (
               @request_id, @transporter_name, @vehicle_number,
               @driver_name, @driver_contact
-              , @additional_charges, @service_charges, @total_charge,
+              ,@additional_charges, @service_charges, @total_charge,
               @container_no, @line, @seal_no,  @vehicle_sequence,
               @seal1, @seal2, @container_total_weight, @cargo_total_weight, @container_type, @container_size
             )
@@ -263,7 +263,7 @@ const transporterModel = {
               VALUES (
                 @request_id, @transporter_name, @vehicle_number,
                 @driver_name, @driver_contact,
-                , @additional_charges, @service_charges, @total_charge,
+                @additional_charges, @service_charges, @total_charge,
                 @container_no, @line, @seal_no,  @vehicle_sequence,
                 @seal1, @seal2, @container_total_weight, @cargo_total_weight, @container_type, @container_size
               )
