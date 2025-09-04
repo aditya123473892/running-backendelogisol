@@ -66,90 +66,82 @@ const transporterModel = {
     }
   },
 
-  createTransporter: async (transportRequestId, transporterData) => {
+  // Get next available sequence number for a request
+  getNextSequenceNumber: async (requestId) => {
     try {
-      // Always find the next available sequence number first
-      const maxSequenceResult = await pool
+      const result = await pool
         .request()
-        .input("request_id", sql.Int, transportRequestId).query(`
-          SELECT MAX(vehicle_sequence) as max_sequence 
+        .input("request_id", sql.Int, requestId).query(`
+          SELECT ISNULL(MAX(vehicle_sequence), 0) + 1 as next_sequence 
+          FROM transporter_details
+          WHERE request_id = @request_id
+        `);
+      return result.recordset[0].next_sequence;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Create multiple vehicles in batch (ATOMIC OPERATION)
+  createMultipleVehicles: async (requestId, vehicles) => {
+    const transaction = pool.transaction();
+
+    try {
+      await transaction.begin();
+
+      // Get the starting sequence number
+      const startSequenceResult = await transaction
+        .request()
+        .input("request_id", sql.Int, requestId).query(`
+          SELECT ISNULL(MAX(vehicle_sequence), 0) as max_sequence 
           FROM transporter_details
           WHERE request_id = @request_id
         `);
 
-      const maxSequence = maxSequenceResult.recordset[0].max_sequence || 0;
-      const nextSequence = maxSequence + 1;
+      let currentSequence = startSequenceResult.recordset[0].max_sequence + 1;
+      const results = [];
 
-      // If a specific vehicle_sequence was provided, check if it already exists
-      if (transporterData.vehicle_sequence) {
-        const existingRecord = await pool
+      for (const vehicleData of vehicles) {
+        const {
+          transporter_name,
+          vehicle_number,
+          driver_name,
+          driver_contact,
+          license_number,
+          license_expiry,
+          additional_charges = 0,
+          service_charges,
+          total_charge,
+          container_no,
+          line,
+          seal_no,
+          seal1,
+          seal2,
+          container_total_weight,
+          cargo_total_weight,
+          container_type,
+          container_size,
+        } = vehicleData;
+
+        const result = await transaction
           .request()
-          .input("request_id", sql.Int, transportRequestId)
-          .input("vehicle_sequence", sql.Int, transporterData.vehicle_sequence)
-          .query(`
-            SELECT id FROM transporter_details
-            WHERE request_id = @request_id AND vehicle_sequence = @vehicle_sequence
-          `);
-
-        // If record exists, update it instead of creating a new one
-        if (existingRecord.recordset.length > 0) {
-          const id = existingRecord.recordset[0].id;
-          return await transporterModel.updateTransporter(id, transporterData);
-        }
-      }
-
-      // Extract all the fields from transporterData
-      const {
-        transporter_name,
-        vehicle_number,
-        driver_name,
-        driver_contact,
-
-        additional_charges,
-        service_charges,
-        total_charge,
-        container_no,
-        line,
-        seal_no,
-
-        seal1,
-        seal2,
-        container_total_weight,
-        cargo_total_weight,
-        container_type,
-        container_size,
-      } = transporterData;
-
-      // For existing requests, always use nextSequence to avoid conflicts
-      // For new requests, use provided sequence if available, otherwise use nextSequence
-      let sequenceToUse = nextSequence;
-
-      // Only use the provided sequence if we're sure it won't conflict
-      if (transporterData.vehicle_sequence && maxSequence === 0) {
-        sequenceToUse = transporterData.vehicle_sequence;
-      }
-
-      // Try to insert with the chosen sequence
-      try {
-        const result = await pool
-          .request()
-          .input("request_id", sql.Int, transportRequestId)
+          .input("request_id", sql.Int, requestId)
           .input("transporter_name", sql.NVarChar(255), transporter_name)
           .input("vehicle_number", sql.NVarChar(50), vehicle_number)
           .input("driver_name", sql.NVarChar(255), driver_name)
           .input("driver_contact", sql.NVarChar(20), driver_contact)
-
+          .input("license_number", sql.NVarChar(50), license_number || null)
+          .input("license_expiry", sql.Date, license_expiry || null)
+          .input("additional_charges", sql.Decimal(12, 2), additional_charges)
           .input(
-            "additional_charges",
-            sql.Decimal(12, 2),
-            additional_charges || 0
+            "service_charges",
+            sql.NVarChar(sql.MAX),
+            service_charges || null
           )
-          .input("service_charges", sql.NVarChar(sql.MAX), service_charges)
-          .input("total_charge", sql.Decimal(12, 2), total_charge)
+          .input("total_charge", sql.Decimal(12, 2), total_charge || 0)
           .input("container_no", sql.NVarChar(100), container_no || null)
           .input("line", sql.NVarChar(100), line || null)
           .input("seal_no", sql.NVarChar(100), seal_no || null)
-
           .input("seal1", sql.NVarChar(100), seal1 || null)
           .input("seal2", sql.NVarChar(100), seal2 || null)
           .input(
@@ -164,125 +156,258 @@ const transporterModel = {
           )
           .input("container_type", sql.NVarChar(50), container_type || null)
           .input("container_size", sql.NVarChar(20), container_size || null)
-          .input("vehicle_sequence", sql.Int, sequenceToUse).query(`
+          .input("vehicle_sequence", sql.Int, currentSequence).query(`
             INSERT INTO transporter_details (
-              request_id, transporter_name, vehicle_number,
-              driver_name, driver_contact,
-               additional_charges, service_charges, total_charge,
-              container_no, line, seal_no,  vehicle_sequence,
-              seal1, seal2, container_total_weight, cargo_total_weight, container_type, container_size
+              request_id, transporter_name, vehicle_number, driver_name, driver_contact,
+              license_number, license_expiry, additional_charges, service_charges, total_charge,
+              container_no, line, seal_no, vehicle_sequence, seal1, seal2, 
+              container_total_weight, cargo_total_weight, container_type, container_size
             )
             OUTPUT INSERTED.*
             VALUES (
-              @request_id, @transporter_name, @vehicle_number,
-              @driver_name, @driver_contact
-              ,@additional_charges, @service_charges, @total_charge,
-              @container_no, @line, @seal_no,  @vehicle_sequence,
-              @seal1, @seal2, @container_total_weight, @cargo_total_weight, @container_type, @container_size
+              @request_id, @transporter_name, @vehicle_number, @driver_name, @driver_contact,
+              @license_number, @license_expiry, @additional_charges, @service_charges, @total_charge,
+              @container_no, @line, @seal_no, @vehicle_sequence, @seal1, @seal2,
+              @container_total_weight, @cargo_total_weight, @container_type, @container_size
             )
           `);
 
-        // Update the transport request status to 'Vehicle Assigned'
-        await pool.request().input("request_id", sql.Int, transportRequestId)
-          .query(`
-            UPDATE transport_requests
-            SET status = 'Vehicle Assigned', updated_at = GETDATE()
-            WHERE id = @request_id
-          `);
+        results.push(result.recordset[0]);
+        currentSequence++;
+      }
 
-        return result.recordset[0];
-      } catch (insertError) {
-        // If we get a unique constraint violation, try again with a new sequence
-        if (
-          insertError.number === 2627 &&
-          insertError.message.includes(
-            "UQ_transporter_details_request_vehicle_seq"
-          )
-        ) {
-          // Remove console.log statements to prevent showing conflict messages
-          // console.log(`Conflict detected for request ${transportRequestId}, sequence ${sequenceToUse}. Retrying with next sequence.`);
+      // Update the transport request status to 'Vehicle Assigned'
+      await transaction.request().input("request_id", sql.Int, requestId)
+        .query(`
+          UPDATE transport_requests
+          SET status = 'Vehicle Assigned', updated_at = GETDATE()
+          WHERE id = @request_id
+        `);
 
-          const retryMaxSequenceResult = await pool
+      await transaction.commit();
+      return results;
+    } catch (error) {
+      await transaction.rollback();
+      console.error("Create multiple vehicles error:", error);
+      throw error;
+    }
+  },
+
+  // Replace the entire updateMultipleVehicleContainers method with this simple version
+  updateMultipleVehicleContainers: async (requestId, vehicleContainers) => {
+    try {
+      console.log("Starting simple batch insert");
+
+      // Get max sequence once
+      const seqResult = await pool
+        .request()
+        .input("request_id", sql.Int, requestId)
+        .query(
+          "SELECT ISNULL(MAX(vehicle_sequence), 0) as max_seq FROM transporter_details WHERE request_id = @request_id"
+        );
+
+      let sequence = seqResult.recordset[0].max_seq + 1;
+      const results = [];
+
+      // Process each vehicle separately - no transaction to avoid locks
+      for (const vc of vehicleContainers) {
+        console.log(`Processing vehicle ${vc.vehicle_number}`);
+
+        // Get vehicle info once
+        const vInfo = await pool
+          .request()
+          .input("request_id", sql.Int, requestId)
+          .input("vehicle_number", sql.NVarChar(50), vc.vehicle_number).query(`
+          SELECT TOP 1 transporter_name, driver_name, driver_contact, 
+                 ISNULL(additional_charges, 0) as additional_charges,
+                 service_charges, ISNULL(total_charge, 0) as total_charge
+          FROM transporter_details 
+          WHERE request_id = @request_id AND vehicle_number = @vehicle_number
+        `);
+
+        if (vInfo.recordset.length === 0) {
+          throw new Error(`Vehicle ${vc.vehicle_number} not found`);
+        }
+
+        const v = vInfo.recordset[0];
+        const containerResults = [];
+
+        // Insert each container individually - faster than batch with complex logic
+        for (const container of vc.containers) {
+          const insertResult = await pool
             .request()
-            .input("request_id", sql.Int, transportRequestId).query(`
-              SELECT MAX(vehicle_sequence) as max_sequence 
-              FROM transporter_details
-              WHERE request_id = @request_id
-            `);
-
-          const retryMaxSequence =
-            retryMaxSequenceResult.recordset[0].max_sequence || 0;
-          const retryNextSequence = retryMaxSequence + 1;
-
-          // Remove console.log statements to prevent showing conflict messages
-          // console.log(`Using new sequence ${retryNextSequence} for request ${transportRequestId}`);
-
-          // Try inserting with the new sequence
-          const retryResult = await pool
-            .request()
-            .input("request_id", sql.Int, transportRequestId)
-            .input("transporter_name", sql.NVarChar(255), transporter_name)
-            .input("vehicle_number", sql.NVarChar(50), vehicle_number)
-            .input("driver_name", sql.NVarChar(255), driver_name)
-            .input("driver_contact", sql.NVarChar(20), driver_contact)
-
+            .input("request_id", sql.Int, requestId)
+            .input("transporter_name", sql.NVarChar(255), v.transporter_name)
+            .input("vehicle_number", sql.NVarChar(50), vc.vehicle_number)
+            .input("driver_name", sql.NVarChar(255), v.driver_name)
+            .input("driver_contact", sql.NVarChar(20), v.driver_contact)
             .input(
               "additional_charges",
               sql.Decimal(12, 2),
-              additional_charges || 0
+              v.additional_charges
             )
-            .input("service_charges", sql.NVarChar(sql.MAX), service_charges)
-            .input("total_charge", sql.Decimal(12, 2), total_charge)
-            .input("container_no", sql.NVarChar(100), container_no || null)
-            .input("line", sql.NVarChar(100), line || null)
-            .input("seal_no", sql.NVarChar(100), seal_no || null)
-
-            .input("seal1", sql.NVarChar(100), seal1 || null)
-            .input("seal2", sql.NVarChar(100), seal2 || null)
+            .input("service_charges", sql.NVarChar(sql.MAX), v.service_charges)
+            .input("total_charge", sql.Decimal(12, 2), v.total_charge)
+            .input(
+              "container_no",
+              sql.NVarChar(100),
+              container.container_no || null
+            )
+            .input("line", sql.NVarChar(100), container.line || null)
+            .input("seal_no", sql.NVarChar(100), container.seal_no || null)
+            .input("seal1", sql.NVarChar(100), container.seal1 || null)
+            .input("seal2", sql.NVarChar(100), container.seal2 || null)
             .input(
               "container_total_weight",
               sql.Decimal(12, 2),
-              container_total_weight || null
+              container.container_total_weight || null
             )
             .input(
               "cargo_total_weight",
               sql.Decimal(12, 2),
-              cargo_total_weight || null
+              container.cargo_total_weight || null
             )
-            .input("container_type", sql.NVarChar(50), container_type || null)
-            .input("container_size", sql.NVarChar(20), container_size || null)
-            .input("vehicle_sequence", sql.Int, retryNextSequence).query(`
-              INSERT INTO transporter_details (
-                request_id, transporter_name, vehicle_number,
-                driver_name, driver_contact,  
-                additional_charges, service_charges, total_charge,
-                container_no, line, seal_no,  vehicle_sequence,
-                seal1, seal2, container_total_weight, cargo_total_weight, container_type, container_size
-              )
-              OUTPUT INSERTED.*
-              VALUES (
-                @request_id, @transporter_name, @vehicle_number,
-                @driver_name, @driver_contact,
-                @additional_charges, @service_charges, @total_charge,
-                @container_no, @line, @seal_no,  @vehicle_sequence,
-                @seal1, @seal2, @container_total_weight, @cargo_total_weight, @container_type, @container_size
-              )
-            `);
+            .input(
+              "container_type",
+              sql.NVarChar(50),
+              container.container_type || null
+            )
+            .input(
+              "container_size",
+              sql.NVarChar(20),
+              container.container_size || null
+            )
+            .input("vehicle_sequence", sql.Int, sequence).query(`
+            INSERT INTO transporter_details (
+              request_id, transporter_name, vehicle_number, driver_name, driver_contact,
+              additional_charges, service_charges, total_charge, container_no, line,
+              seal_no, vehicle_sequence, seal1, seal2, container_total_weight,
+              cargo_total_weight, container_type, container_size
+            )
+            OUTPUT INSERTED.id, INSERTED.container_no
+            VALUES (
+              @request_id, @transporter_name, @vehicle_number, @driver_name, @driver_contact,
+              @additional_charges, @service_charges, @total_charge, @container_no, @line,
+              @seal_no, @vehicle_sequence, @seal1, @seal2, @container_total_weight,
+              @cargo_total_weight, @container_type, @container_size
+            )
+          `);
 
-          // Update the transport request status to 'Vehicle Assigned'
-          await pool.request().input("request_id", sql.Int, transportRequestId)
-            .query(`
-              UPDATE transport_requests
-              SET status = 'Vehicle Assigned', updated_at = GETDATE()
-              WHERE id = @request_id
-            `);
+          containerResults.push({
+            id: insertResult.recordset[0].id,
+            container_no: insertResult.recordset[0].container_no,
+          });
 
-          return retryResult.recordset[0];
-        } else {
-          // If it's not a unique constraint error, rethrow
-          throw insertError;
+          sequence++;
         }
+
+        results.push({
+          vehicle_number: vc.vehicle_number,
+          containers: containerResults,
+          hasWarnings: containerResults.some((c) => c.containerAlreadyUsed),
+          containerCount: containerResults.length,
+        });
       }
+
+      console.log("Simple batch insert completed");
+      return results;
+    } catch (error) {
+      console.error("Simple batch insert error:", error);
+      throw error;
+    }
+  },
+
+  // Original createTransporter method (simplified and fixed)
+  createTransporter: async (transportRequestId, transporterData) => {
+    try {
+      const nextSequence = await transporterModel.getNextSequenceNumber(
+        transportRequestId
+      );
+      const sequenceToUse = transporterData.vehicle_sequence || nextSequence;
+
+      const {
+        transporter_name,
+        vehicle_number,
+        driver_name,
+        driver_contact,
+        license_number,
+        license_expiry,
+        additional_charges,
+        service_charges,
+        total_charge,
+        container_no,
+        line,
+        seal_no,
+        seal1,
+        seal2,
+        container_total_weight,
+        cargo_total_weight,
+        container_type,
+        container_size,
+      } = transporterData;
+
+      const result = await pool
+        .request()
+        .input("request_id", sql.Int, transportRequestId)
+        .input("transporter_name", sql.NVarChar(255), transporter_name)
+        .input("vehicle_number", sql.NVarChar(50), vehicle_number)
+        .input("driver_name", sql.NVarChar(255), driver_name)
+        .input("driver_contact", sql.NVarChar(20), driver_contact)
+        .input("license_number", sql.NVarChar(50), license_number || null)
+        .input("license_expiry", sql.Date, license_expiry || null)
+        .input(
+          "additional_charges",
+          sql.Decimal(12, 2),
+          additional_charges || 0
+        )
+        .input(
+          "service_charges",
+          sql.NVarChar(sql.MAX),
+          service_charges || null
+        )
+        .input("total_charge", sql.Decimal(12, 2), total_charge || 0)
+        .input("container_no", sql.NVarChar(100), container_no || null)
+        .input("line", sql.NVarChar(100), line || null)
+        .input("seal_no", sql.NVarChar(100), seal_no || null)
+        .input("seal1", sql.NVarChar(100), seal1 || null)
+        .input("seal2", sql.NVarChar(100), seal2 || null)
+        .input(
+          "container_total_weight",
+          sql.Decimal(12, 2),
+          container_total_weight || null
+        )
+        .input(
+          "cargo_total_weight",
+          sql.Decimal(12, 2),
+          cargo_total_weight || null
+        )
+        .input("container_type", sql.NVarChar(50), container_type || null)
+        .input("container_size", sql.NVarChar(20), container_size || null)
+        .input("vehicle_sequence", sql.Int, sequenceToUse).query(`
+          INSERT INTO transporter_details (
+            request_id, transporter_name, vehicle_number, driver_name, driver_contact,
+            license_number, license_expiry, additional_charges, service_charges, total_charge,
+            container_no, line, seal_no, vehicle_sequence, seal1, seal2, 
+            container_total_weight, cargo_total_weight, container_type, container_size
+          )
+          OUTPUT INSERTED.*
+          VALUES (
+            @request_id, @transporter_name, @vehicle_number, @driver_name, @driver_contact,
+            @license_number, @license_expiry, @additional_charges, @service_charges, @total_charge,
+            @container_no, @line, @seal_no, @vehicle_sequence, @seal1, @seal2,
+            @container_total_weight, @cargo_total_weight, @container_type, @container_size
+          )
+        `);
+
+      // Update the transport request status to 'Vehicle Assigned'
+      await pool.request().input("request_id", sql.Int, transportRequestId)
+        .query(`
+          UPDATE transport_requests
+          SET status = 'Vehicle Assigned', updated_at = GETDATE()
+          WHERE id = @request_id
+        `);
+
+      return result.recordset[0];
     } catch (error) {
       console.error("Create transporter error:", error);
       throw error;
@@ -341,14 +466,9 @@ const transporterModel = {
           `);
 
         if (conflictCheck.recordset.length > 0) {
-          const maxSequenceResult = await pool
-            .request()
-            .input("request_id", sql.Int, request_id).query(`
-              SELECT ISNULL(MAX(vehicle_sequence), 0) + 1 as next_sequence 
-              FROM transporter_details
-              WHERE request_id = @request_id
-            `);
-          sequenceToUse = maxSequenceResult.recordset[0].next_sequence;
+          sequenceToUse = await transporterModel.getNextSequenceNumber(
+            request_id
+          );
         } else {
           sequenceToUse = transporterData.vehicle_sequence;
         }
@@ -359,6 +479,8 @@ const transporterModel = {
         vehicle_number,
         driver_name,
         driver_contact,
+        license_number,
+        license_expiry,
         additional_charges,
         service_charges,
         total_charge,
@@ -371,7 +493,7 @@ const transporterModel = {
         cargo_total_weight,
         container_type,
         container_size,
-        Vin_no,
+        vin_no,
       } = transporterData;
 
       const result = await pool
@@ -381,6 +503,8 @@ const transporterModel = {
         .input("vehicle_number", sql.NVarChar(50), vehicle_number)
         .input("driver_name", sql.NVarChar(255), driver_name)
         .input("driver_contact", sql.NVarChar(20), driver_contact)
+        .input("license_number", sql.NVarChar(50), license_number || null)
+        .input("license_expiry", sql.Date, license_expiry || null)
         .input(
           "additional_charges",
           sql.Decimal(12, 2),
@@ -406,13 +530,15 @@ const transporterModel = {
         .input("container_type", sql.NVarChar(50), container_type || null)
         .input("container_size", sql.NVarChar(20), container_size || null)
         .input("vehicle_sequence", sql.Int, sequenceToUse)
-        .input("vin_no", sql.NVarChar(100), Vin_no || null).query(`
+        .input("vin_no", sql.NVarChar(100), vin_no || null).query(`
           UPDATE transporter_details 
           SET 
             transporter_name = @transporter_name,
             vehicle_number = @vehicle_number,
             driver_name = @driver_name,
             driver_contact = @driver_contact,
+            license_number = @license_number,
+            license_expiry = @license_expiry,
             additional_charges = @additional_charges,
             service_charges = @service_charges,
             total_charge = @total_charge,
@@ -493,12 +619,14 @@ const transporterModel = {
         container_no,
         line,
         seal_no,
+        number_of_containers,
         seal1,
         seal2,
         container_total_weight,
         cargo_total_weight,
         container_type,
         container_size,
+        vehicle_number,
       } = containerData;
 
       const result = await pool
@@ -507,6 +635,7 @@ const transporterModel = {
         .input("container_no", sql.NVarChar(100), container_no || null)
         .input("line", sql.NVarChar(100), line || null)
         .input("seal_no", sql.NVarChar(100), seal_no || null)
+        .input("number_of_containers", sql.Int, number_of_containers || null)
         .input("seal1", sql.NVarChar(100), seal1 || null)
         .input("seal2", sql.NVarChar(100), seal2 || null)
         .input(
@@ -521,18 +650,21 @@ const transporterModel = {
         )
         .input("container_type", sql.NVarChar(50), container_type || null)
         .input("container_size", sql.NVarChar(20), container_size || null)
+        .input("vehicle_number", sql.NVarChar(50), vehicle_number || null)
         .query(`
           UPDATE transporter_details 
           SET 
             container_no = @container_no,
             line = @line,
             seal_no = @seal_no,
+            number_of_containers = @number_of_containers,
             seal1 = @seal1,
             seal2 = @seal2,
             container_total_weight = @container_total_weight,
             cargo_total_weight = @cargo_total_weight,
             container_type = @container_type,
             container_size = @container_size,
+            vehicle_number = COALESCE(@vehicle_number, vehicle_number),
             updated_at = GETDATE()
           OUTPUT INSERTED.*
           WHERE id = @id
@@ -554,7 +686,7 @@ const transporterModel = {
     }
   },
 
-  // Add multiple containers to a vehicle
+  // Add multiple containers to a vehicle (improved)
   addContainersToVehicle: async (requestId, vehicleNumber, containersData) => {
     try {
       const vehicleResult = await pool
@@ -566,6 +698,8 @@ const transporterModel = {
             additional_charges, service_charges, total_charge
           FROM transporter_details 
           WHERE request_id = @request_id AND vehicle_number = @vehicle_number
+          ORDER BY vehicle_sequence
+          OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY
         `);
 
       if (vehicleResult.recordset.length === 0) {
@@ -574,6 +708,11 @@ const transporterModel = {
 
       const vehicleDetails = vehicleResult.recordset[0];
       const results = [];
+
+      // Get starting sequence for batch insert
+      let currentSequence = await transporterModel.getNextSequenceNumber(
+        requestId
+      );
 
       for (const containerData of containersData) {
         let containerHistoryResult = {
@@ -587,14 +726,6 @@ const transporterModel = {
             requestId
           );
         }
-
-        const sequenceResult = await pool
-          .request()
-          .input("request_id", sql.Int, requestId).query(`
-            SELECT ISNULL(MAX(vehicle_sequence), 0) + 1 as next_sequence 
-            FROM transporter_details
-            WHERE request_id = @request_id
-          `);
 
         const {
           container_no,
@@ -659,11 +790,7 @@ const transporterModel = {
           )
           .input("container_type", sql.NVarChar(50), container_type || null)
           .input("container_size", sql.NVarChar(20), container_size || null)
-          .input(
-            "vehicle_sequence",
-            sql.Int,
-            sequenceResult.recordset[0].next_sequence
-          ).query(`
+          .input("vehicle_sequence", sql.Int, currentSequence).query(`
             INSERT INTO transporter_details (
               request_id, transporter_name, vehicle_number, driver_name, driver_contact,
               additional_charges, service_charges, total_charge, container_no, line,
@@ -690,6 +817,8 @@ const transporterModel = {
               ? `Warning: Container ${container_no} was last used in Request #${containerHistoryResult.lastUsed.request_id} (Total: ${containerHistoryResult.totalUses} previous use(s))`
               : null,
         });
+
+        currentSequence++;
       }
 
       return {

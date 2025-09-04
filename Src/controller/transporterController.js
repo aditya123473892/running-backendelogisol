@@ -12,7 +12,6 @@ class TransporterController {
         driver_contact,
         license_number,
         license_expiry,
-        // base_charge, - Remove this line
         additional_charges,
         service_charges,
         total_charge,
@@ -20,7 +19,7 @@ class TransporterController {
         line,
         seal_no,
         number_of_containers,
-        vehicle_sequence, // Add this field to track vehicle sequence
+        vehicle_sequence,
       } = req.body;
 
       // Validate required fields
@@ -30,7 +29,6 @@ class TransporterController {
         !vehicle_number ||
         !driver_name ||
         !driver_contact
-        // !base_charge - Remove this line
       ) {
         return res.status(400).json({
           success: false,
@@ -59,7 +57,6 @@ class TransporterController {
           driver_contact,
           license_number,
           license_expiry,
-
           additional_charges,
           service_charges,
           total_charge,
@@ -67,7 +64,7 @@ class TransporterController {
           line,
           seal_no,
           number_of_containers,
-          vehicle_sequence, // Pass vehicle sequence to model
+          vehicle_sequence,
         }
       );
 
@@ -87,6 +84,120 @@ class TransporterController {
     }
   }
 
+  // Batch create multiple vehicles
+  static async createMultipleVehicles(req, res) {
+    try {
+      const { requestId } = req.params;
+      const { vehicles } = req.body;
+
+      // Validate inputs
+      if (!requestId) {
+        return res.status(400).json({
+          success: false,
+          message: "Request ID is required",
+        });
+      }
+
+      if (!vehicles || !Array.isArray(vehicles) || vehicles.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Vehicles array is required and cannot be empty",
+        });
+      }
+
+      // Validate each vehicle
+      for (const vehicle of vehicles) {
+        if (
+          !vehicle.transporter_name ||
+          !vehicle.vehicle_number ||
+          !vehicle.driver_name ||
+          !vehicle.driver_contact
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Each vehicle must have transporter_name, vehicle_number, driver_name, and driver_contact",
+          });
+        }
+      }
+
+      // Check if transport request exists
+      const requestCheck = await transporterModel.checkTransportRequestExists(
+        requestId
+      );
+      if (!requestCheck) {
+        return res.status(404).json({
+          success: false,
+          message: "Transport request not found",
+        });
+      }
+
+      // Create multiple vehicles
+      const results = await transporterModel.createMultipleVehicles(
+        requestId,
+        vehicles
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: `${results.length} vehicles created successfully`,
+        data: results,
+      });
+    } catch (error) {
+      console.error("Create multiple vehicles error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error creating multiple vehicles",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+
+  // Batch update containers for multiple vehicles
+  // Simplified batch update controller
+  // Replace the controller method with this minimal version
+  static async updateMultipleVehicleContainers(req, res) {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const { vehicleContainers } = req.body;
+
+      // Basic validation only
+      if (
+        !requestId ||
+        !vehicleContainers ||
+        !Array.isArray(vehicleContainers)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid input",
+        });
+      }
+
+      console.log(
+        `Processing ${vehicleContainers.length} vehicles for request ${requestId}`
+      );
+
+      // Call the simple method
+      const results = await transporterModel.updateMultipleVehicleContainers(
+        requestId,
+        vehicleContainers
+      );
+
+      return res.json({
+        success: true,
+        message: "Containers added successfully",
+        data: results,
+      });
+    } catch (error) {
+      console.error("Controller error:", error.message);
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
   // Update transporter details
   static async updateTransporterDetails(req, res) {
     try {
@@ -98,21 +209,20 @@ class TransporterController {
         driver_contact,
         license_number,
         license_expiry,
-
         additional_charges,
-        service_charges, // Add this to accept service charges
+        service_charges,
         total_charge,
         container_no,
         line,
         seal_no,
         number_of_containers,
-        seal1, // Add this
-        seal2, // Add this
-        container_total_weight, // Add this
-        cargo_total_weight, // Add this
-        container_type, // Add this
+        seal1,
+        seal2,
+        container_total_weight,
+        cargo_total_weight,
+        container_type,
         container_size,
-        vin_no, // Add this
+        vin_no,
       } = req.body;
 
       // Update transporter details using model
@@ -123,21 +233,20 @@ class TransporterController {
         driver_contact,
         license_number,
         license_expiry,
-
         additional_charges,
-        service_charges, // Pass service charges to model
+        service_charges,
         total_charge,
         container_no,
         line,
         seal_no,
         number_of_containers,
-        seal1, // Add this
-        seal2, // Add this
-        container_total_weight, // Add this
-        cargo_total_weight, // Add this
-        container_type, // Add this
+        seal1,
+        seal2,
+        container_total_weight,
+        cargo_total_weight,
+        container_type,
         container_size,
-        vin_no, // Add this
+        vin_no,
       });
 
       if (!result) {
@@ -179,7 +288,7 @@ class TransporterController {
 
       res.json({
         success: true,
-        data: transporterDetails, // This will return an array
+        data: transporterDetails,
       });
     } catch (error) {
       console.error("Controller error:", error);
@@ -249,7 +358,6 @@ class TransporterController {
   }
 
   // Update container details
-  // Update container details
   static async updateContainerDetails(req, res) {
     try {
       const { id } = req.params;
@@ -258,13 +366,13 @@ class TransporterController {
         line,
         seal_no,
         number_of_containers,
-        seal1, // Add this
-        seal2, // Add this
-        container_total_weight, // Add this
-        cargo_total_weight, // Add this
-        container_type, // Add this
-        container_size, // Add this
-        vehicle_number, // Add this
+        seal1,
+        seal2,
+        container_total_weight,
+        cargo_total_weight,
+        container_type,
+        container_size,
+        vehicle_number,
       } = req.body;
 
       // Update container details using model
@@ -273,13 +381,13 @@ class TransporterController {
         line,
         seal_no,
         number_of_containers,
-        seal1, // Add this
-        seal2, // Add this
-        container_total_weight, // Add this
-        cargo_total_weight, // Add this
-        container_type, // Add this
-        container_size, // Add this
-        vehicle_number, // Add this
+        seal1,
+        seal2,
+        container_total_weight,
+        cargo_total_weight,
+        container_type,
+        container_size,
+        vehicle_number,
       });
 
       if (!result) {
@@ -429,7 +537,7 @@ class TransporterController {
 
       return res.status(201).json({
         success: true,
-        message: `${results.length} containers added successfully to vehicle ${vehicleNumber}`,
+        message: `${results.containers.length} containers added successfully to vehicle ${vehicleNumber}`,
         data: results,
       });
     } catch (error) {
