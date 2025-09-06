@@ -155,22 +155,20 @@ class TransporterController {
   }
 
   // Batch update containers for multiple vehicles
-  // Simplified batch update controller
-  // Replace the controller method with this minimal version
   static async updateMultipleVehicleContainers(req, res) {
     try {
       const requestId = parseInt(req.params.requestId);
       const { vehicleContainers } = req.body;
 
-      // Basic validation only
       if (
         !requestId ||
         !vehicleContainers ||
-        !Array.isArray(vehicleContainers)
+        !Array.isArray(vehicleContainers) ||
+        vehicleContainers.length === 0
       ) {
         return res.status(400).json({
           success: false,
-          message: "Invalid input",
+          message: "Invalid input: requestId and a non-empty vehicleContainers array are required.",
         });
       }
 
@@ -178,22 +176,24 @@ class TransporterController {
         `Processing ${vehicleContainers.length} vehicles for request ${requestId}`
       );
 
-      // Call the simple method
       const results = await transporterModel.updateMultipleVehicleContainers(
         requestId,
         vehicleContainers
       );
 
+      const totalContainersAssigned = results.reduce((sum, result) => sum + result.containerCount, 0);
+
       return res.json({
         success: true,
-        message: "Containers added successfully",
+        message: `${totalContainersAssigned} container(s) assigned successfully to ${results.length} vehicle(s).`,
         data: results,
       });
     } catch (error) {
-      console.error("Controller error:", error.message);
+      console.error("Controller error in updateMultipleVehicleContainers:", error.message);
       return res.status(500).json({
         success: false,
-        message: error.message,
+        message: "An error occurred while assigning containers.",
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
