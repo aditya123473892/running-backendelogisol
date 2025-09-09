@@ -14,7 +14,7 @@ app.use(
       "https://elogisol-d7em.vercel.app",
       "http://10.0.2.2:4000",
       "https://transplus.vercel.app",
-      "https://elogisolvin.vercel.app/login",
+      "https://elogisolvin.vercel.app",
       "https://transplus.vercel.app",
     ],
     credentials: true,
