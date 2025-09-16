@@ -490,8 +490,8 @@ exports.getcontainerbyrequestid = async (req, res) => {
 
 exports.getFilteredRequests = async (req, res) => {
   try {
-    const { shipa_no, request_id, container_no, date } = req.query;
-    const filters = { shipa_no, request_id, container_no, date };
+    const { shipa_no, request_id, container_no, date, from_date, to_date } = req.query;
+    const filters = { shipa_no, request_id, container_no, date, from_date, to_date };
 
     const { requests, totalRequests } = await TransportRequest.getRequestsByFilters(filters);
     

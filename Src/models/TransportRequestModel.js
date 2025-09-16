@@ -291,13 +291,23 @@ class TransportRequest {
   }
 static async getRequestsByFilters(filters) {
     try {
-      const { shipa_no, request_id, container_no, date } = filters;
+      const { shipa_no, request_id, container_no, date, from_date, to_date } = filters; 
       
       let query = `
-        SELECT DISTINCT tr.*
+        SELECT DISTINCT tr.*,
+        CONVERT(varchar, tr.created_at, 120) as request_created_at,
+        CONVERT(varchar, tr.updated_at, 120) as request_updated_at,
+        CONVERT(varchar, tr.expected_pickup_date, 23) as formatted_pickup_date,
+        CONVERT(varchar, tr.expected_delivery_date, 23) as formatted_delivery_date,
+        CONVERT(varchar, tr.expected_pickup_time, 108) as formatted_pickup_time,
+        CONVERT(varchar, tr.expected_delivery_time, 108) as formatted_delivery_time,
+        u.name as customer_name,
+        u.email as customer_email,
+        u.created_at as user_created_at
         FROM transport_requests tr
         LEFT JOIN transporter_details td ON tr.id = td.request_id
-      `;
+        LEFT JOIN users u ON tr.customer_id = u.id
+      `; 
 
       const whereClauses = [];
       const request = pool.request();
@@ -318,10 +328,32 @@ static async getRequestsByFilters(filters) {
         whereClauses.push(`CONVERT(date, tr.created_at) = @date`);
         request.input('date', sql.Date, date);
       }
+      // New date range filters
+      if (from_date && to_date) {
+        // Ensure to_date includes the entire day
+        const nextDay = new Date(to_date);
+        nextDay.setDate(nextDay.getDate() + 1); // Add one day
+        whereClauses.push(`tr.created_at >= @from_date AND tr.created_at < @to_date_plus_one_day`);
+        request.input('from_date', sql.Date, from_date);
+        request.input('to_date_plus_one_day', sql.Date, nextDay.toISOString().split('T')[0]); // Pass as YYYY-MM-DD
+      } else if (from_date) {
+        whereClauses.push(`tr.created_at >= @from_date`);
+        request.input('from_date', sql.Date, from_date);
+      } else if (to_date) {
+        // Ensure to_date includes the entire day
+        const nextDay = new Date(to_date);
+        nextDay.setDate(nextDay.getDate() + 1); // Add one day
+        whereClauses.push(`tr.created_at < @to_date_plus_one_day`);
+        request.input('to_date_plus_one_day', sql.Date, nextDay.toISOString().split('T')[0]); // Pass as YYYY-MM-DD
+      }
+
 
       if (whereClauses.length > 0) {
-        query += ` WHERE ${whereClauses.join(' OR ')}`;
+        query += ` WHERE ${whereClauses.join(' AND ')}`; 
       }
+
+      // Add ORDER BY clause
+      query += ` ORDER BY tr.created_at DESC`;
 
       const result = await request.query(query);
       return { requests: result.recordset, totalRequests: result.recordset.length };
