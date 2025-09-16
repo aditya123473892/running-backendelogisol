@@ -6,6 +6,7 @@ const {
   getAllRequests,
   updateRequestStatus,
   updateRequest,
+  getFilteredRequests,
 } = require("../controller/transportRequestController");
 const auth = require("../middlewares/auth");
 const adminAuth = require("../middlewares/adminmiddleware");
@@ -24,6 +25,8 @@ router.put("/update/:id", updateRequest);
 
 // Admin routes
 router.get("/all", auth, adminAuth, getAllRequests);
+router.get("/filtered", auth, adminAuth, getFilteredRequests);
 router.put("/:requestId/status", auth, adminAuth, updateRequestStatus);
 
 module.exports = router;
+

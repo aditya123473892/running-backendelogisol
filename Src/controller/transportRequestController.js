@@ -487,3 +487,28 @@ exports.getcontainerbyrequestid = async (req, res) => {
     });
   }
 };
+
+exports.getFilteredRequests = async (req, res) => {
+  try {
+    const { shipa_no, request_id, container_no, date } = req.query;
+    const filters = { shipa_no, request_id, container_no, date };
+
+    const { requests, totalRequests } = await TransportRequest.getRequestsByFilters(filters);
+    
+    res.status(200).json({
+      success: true,
+      requests,
+      totalRequests,
+      currentPage: 1, // Not implementing pagination for this custom filter for now
+      perPage: totalRequests,
+      totalPages: 1,
+    });
+  } catch (error) {
+    console.error("Get filtered requests error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching filtered transport requests",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};

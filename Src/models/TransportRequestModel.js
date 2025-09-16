@@ -289,6 +289,47 @@ class TransportRequest {
       throw error;
     }
   }
+static async getRequestsByFilters(filters) {
+    try {
+      const { shipa_no, request_id, container_no, date } = filters;
+      
+      let query = `
+        SELECT DISTINCT tr.*
+        FROM transport_requests tr
+        LEFT JOIN transporter_details td ON tr.id = td.request_id
+      `;
+
+      const whereClauses = [];
+      const request = pool.request();
+
+      if (shipa_no) {
+        whereClauses.push(`tr.SHIPA_NO LIKE @shipa_no`);
+        request.input('shipa_no', sql.NVarChar, `%${shipa_no}%`);
+      }
+      if (request_id) {
+        whereClauses.push(`tr.id = @request_id`);
+        request.input('request_id', sql.Int, request_id);
+      }
+      if (container_no) {
+        whereClauses.push(`td.container_no LIKE @container_no`);
+        request.input('container_no', sql.NVarChar, `%${container_no}%`);
+      }
+      if (date) {
+        whereClauses.push(`CONVERT(date, tr.created_at) = @date`);
+        request.input('date', sql.Date, date);
+      }
+
+      if (whereClauses.length > 0) {
+        query += ` WHERE ${whereClauses.join(' OR ')}`;
+      }
+
+      const result = await request.query(query);
+      return { requests: result.recordset, totalRequests: result.recordset.length };
+    } catch (error) {
+      console.error("Get filtered requests error:", error);
+      throw error;
+    }
+  }
 }
 
 module.exports = TransportRequest;
