@@ -95,11 +95,23 @@ class TransportRequest {
     }
   }
 
-  static async getCustomerRequests(customerId) {
+  static async getCustomerRequests(customerId, page, limit) {
     try {
+      const offset = (page - 1) * limit;
+
+      const countResult = await pool
+        .request()
+        .input("customerId", sql.Int, customerId)
+        .query(`SELECT COUNT(*) AS total FROM transport_requests WHERE customer_id = @customerId`);
+
+      const totalRequests = countResult.recordset[0].total;
+
       const result = await pool
         .request()
-        .input("customerId", sql.Int, customerId).query(`
+        .input("customerId", sql.Int, customerId)
+        .input("offset", sql.Int, offset)
+        .input("limit", sql.Int, limit)
+        .query(`
           SELECT 
             tr.*,
             CONVERT(varchar, tr.created_at, 120) as request_created_at,
@@ -111,32 +123,46 @@ class TransportRequest {
           FROM transport_requests tr
           WHERE tr.customer_id = @customerId
           ORDER BY tr.created_at DESC
+          OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
         `);
-      return result.recordset;
+      return { requests: result.recordset, totalRequests };
     } catch (error) {
       throw error;
     }
   }
 
-  static async getAllRequests() {
+  static async getAllRequests(page, limit) {
     try {
-      const result = await pool.request().query(`
-        SELECT 
-          tr.*,
-          CONVERT(varchar, tr.created_at, 120) as request_created_at,
-          CONVERT(varchar, tr.updated_at, 120) as request_updated_at,
-          CONVERT(varchar, tr.expected_pickup_date, 23) as formatted_pickup_date,
-          CONVERT(varchar, tr.expected_delivery_date, 23) as formatted_delivery_date,
-          CONVERT(varchar, tr.expected_pickup_time, 108) as formatted_pickup_time,
-          CONVERT(varchar, tr.expected_delivery_time, 108) as formatted_delivery_time,
-          u.name as customer_name,
-          u.email as customer_email,
-          u.created_at as user_created_at
-        FROM transport_requests tr
-        LEFT JOIN users u ON tr.customer_id = u.id
-        ORDER BY tr.created_at DESC
-      `);
-      return result.recordset;
+      const offset = (page - 1) * limit;
+
+      const countResult = await pool
+        .request()
+        .query(`SELECT COUNT(*) AS total FROM transport_requests`);
+
+      const totalRequests = countResult.recordset[0].total;
+
+      const result = await pool
+        .request()
+        .input("offset", sql.Int, offset)
+        .input("limit", sql.Int, limit)
+        .query(`
+          SELECT 
+            tr.*,
+            CONVERT(varchar, tr.created_at, 120) as request_created_at,
+            CONVERT(varchar, tr.updated_at, 120) as request_updated_at,
+            CONVERT(varchar, tr.expected_pickup_date, 23) as formatted_pickup_date,
+            CONVERT(varchar, tr.expected_delivery_date, 23) as formatted_delivery_date,
+            CONVERT(varchar, tr.expected_pickup_time, 108) as formatted_pickup_time,
+            CONVERT(varchar, tr.expected_delivery_time, 108) as formatted_delivery_time,
+            u.name as customer_name,
+            u.email as customer_email,
+            u.created_at as user_created_at
+          FROM transport_requests tr
+          LEFT JOIN users u ON tr.customer_id = u.id
+          ORDER BY tr.created_at DESC
+          OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+        `);
+      return { requests: result.recordset, totalRequests };
     } catch (error) {
       throw error;
     }

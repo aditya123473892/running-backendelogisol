@@ -364,10 +364,26 @@ exports.updateRequest = async (req, res) => {
 
 exports.getCustomerRequests = async (req, res) => {
   try {
-    const requests = await TransportRequest.getCustomerRequests(req.user.id);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+
+    const { requests, totalRequests } = await TransportRequest.getCustomerRequests(req.user.id, page, limit);
+    
+    const formattedRequests = requests.map((request) => ({
+      ...request,
+      expected_pickup_time: formatTimeForClient(request.expected_pickup_time),
+      expected_delivery_time: formatTimeForClient(
+        request.expected_delivery_time
+      ),
+    }));
+
     res.status(200).json({
       success: true,
-      requests,
+      requests: formattedRequests,
+      totalRequests,
+      currentPage: page,
+      perPage: limit,
+      totalPages: Math.ceil(totalRequests / limit),
     });
   } catch (error) {
     console.error("Get customer requests error:", error);
@@ -381,10 +397,17 @@ exports.getCustomerRequests = async (req, res) => {
 
 exports.getAllRequests = async (req, res) => {
   try {
-    const requests = await TransportRequest.getAllRequests();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+
+    const { requests, totalRequests } = await TransportRequest.getAllRequests(page, limit);
     res.status(200).json({
       success: true,
       requests,
+      totalRequests,
+      currentPage: page,
+      perPage: limit,
+      totalPages: Math.ceil(totalRequests / limit),
     });
   } catch (error) {
     console.error("Get all requests error:", error);
