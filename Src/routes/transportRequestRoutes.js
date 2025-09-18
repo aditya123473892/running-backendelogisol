@@ -24,9 +24,8 @@ router.get("/my-requests", getCustomerRequests);
 router.put("/update/:id", updateRequest);
 
 // Admin routes
-router.get("/all", auth, adminAuth, getAllRequests);
+router.get("/all", auth, getAllRequests);
 router.get("/filtered", auth, adminAuth, getFilteredRequests);
 router.put("/:requestId/status", auth, adminAuth, updateRequestStatus);
 
 module.exports = router;
-
