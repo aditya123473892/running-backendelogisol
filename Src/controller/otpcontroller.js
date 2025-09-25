@@ -33,10 +33,22 @@ exports.sendOtpAfterPassword = async (req, res) => {
 
   try {
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: "onboarding@resend.dev", // Use Resend's test domain for now
+      // Alternative: from: process.env.FROM_EMAIL, // If you set up your own verified domain
       to: email,
       subject: "Your OTP Code",
       text: `Your OTP is ${otp}. It expires in 5 minutes.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Your OTP Code</h2>
+          <p>Your one-time password is:</p>
+          <div style="background: #f5f5f5; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 3px; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p style="color: #666;">This code will expire in 5 minutes.</p>
+          <p style="color: #999; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+        </div>
+      `,
     });
 
     res.json({ message: "OTP sent to your email" });

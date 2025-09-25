@@ -3,12 +3,12 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../../.env") });
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com", // Gmail SMTP server
-  port: 587, // TLS port
-  secure: false, // Use STARTTLS
+  host: "smtp.resend.com",
+  port: 587, // or 587 for STARTTLS
+  secure: false, // true for 465, false for 587
   auth: {
-    user: process.env.EMAIL_USER, // Your Gmail address
-    pass: process.env.EMAIL_PASS, // App password (not regular Gmail password)
+    user: "resend", // This is always "resend" for Resend API
+    pass: process.env.RESEND_API_KEY, // Your Resend API key (starts with re_)
   },
 });
 
