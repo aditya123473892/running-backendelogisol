@@ -144,11 +144,19 @@ class TransactionController {
   static async getTransactionsByTransporterId(req, res) {
     try {
       const { transporterId } = req.params;
+      const transporterIdInt = parseInt(transporterId, 10);
+
+      if (isNaN(transporterIdInt)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid transporter ID",
+        });
+      }
 
       // Query to get transactions by transporter_id
       const result = await pool
         .request()
-        .input("transporterId", sql.Int, transporterId).query(`
+        .input("transporterId", sql.Int, transporterIdInt).query(`
           SELECT * FROM transport_transaction_master
           WHERE transporter_id = @transporterId
           ORDER BY created_at DESC
@@ -173,7 +181,18 @@ class TransactionController {
   static async getTransactionById(req, res) {
     try {
       const { id } = req.params;
-      const transaction = await TransactionModel.getTransactionById(id);
+      const transactionId = parseInt(id, 10);
+
+      if (isNaN(transactionId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid transaction ID",
+        });
+      }
+
+      const transaction = await TransactionModel.getTransactionById(
+        transactionId
+      );
 
       if (!transaction) {
         return res.status(404).json({
@@ -201,6 +220,15 @@ class TransactionController {
   static async getTransactionsByRequestId(req, res) {
     try {
       const { requestId } = req.params;
+      const requestIdInt = parseInt(requestId, 10);
+
+      if (isNaN(requestIdInt)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid request ID",
+        });
+      }
+
       const transactions = await TransactionModel.getTransactionsByRequestId(
         requestId
       );
@@ -224,6 +252,15 @@ class TransactionController {
   static async updatePayment(req, res) {
     try {
       const { id } = req.params;
+      const transactionIdInt = parseInt(id, 10);
+
+      if (isNaN(transactionIdInt)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid transaction ID",
+        });
+      }
+
       const { payment_amount, payment_mode, payment_date, remarks } = req.body;
 
       if (!payment_amount || !payment_mode) {
@@ -335,6 +372,15 @@ class TransactionController {
   static async getPaymentDetails(req, res) {
     try {
       const { id } = req.params;
+      const transactionIdInt = parseInt(id, 10);
+
+      if (isNaN(transactionIdInt)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid transaction ID",
+        });
+      }
+
       const payments = await PaymentDetailsModel.getPaymentsByTransactionId(id);
 
       return res.status(200).json({
@@ -356,6 +402,15 @@ class TransactionController {
   static async deleteTransaction(req, res) {
     try {
       const { id } = req.params;
+      const transactionIdInt = parseInt(id, 10);
+
+      if (isNaN(transactionIdInt)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid transaction ID",
+        });
+      }
+
       const deletedTransaction = await TransactionModel.deleteTransaction(id);
 
       if (!deletedTransaction) {
@@ -412,11 +467,19 @@ class TransactionController {
   static async getTransactionsByCustomerId(req, res) {
     try {
       const { customerId } = req.params;
+      const customerIdInt = parseInt(customerId, 10);
+
+      if (isNaN(customerIdInt)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid customer ID",
+        });
+      }
 
       // Query to get transactions by customer_id from transport_requests
       const result = await pool
         .request()
-        .input("customerId", sql.Int, customerId).query(`
+        .input("customerId", sql.Int, customerIdInt).query(`
           SELECT ttm.*, tr.status as request_status, u.name as customer_name
           FROM transport_transaction_master ttm
           INNER JOIN transport_requests tr ON ttm.request_id = tr.id
@@ -434,6 +497,401 @@ class TransactionController {
       return res.status(500).json({
         success: false,
         message: "Error fetching transactions",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+
+  // Get daily advance payments with date filters
+  static async getDailyAdvancePayments(req, res) {
+    try {
+      const { date, from_date, to_date } = req.query;
+
+      // If no date parameters provided, return empty result
+      if (!date && !from_date && !to_date) {
+        return res.status(200).json({
+          success: true,
+          data: {},
+        });
+      }
+
+      let whereClause = "";
+      let request = pool.request();
+
+      if (date) {
+        // Single date filter - use date range for the entire day
+        const selectedDate = new Date(date);
+        const nextDay = new Date(selectedDate);
+        nextDay.setDate(selectedDate.getDate() + 1);
+
+        whereClause +=
+          " AND ttm.created_at >= @startDate AND ttm.created_at < @endDate";
+        request = request.input("startDate", sql.DateTime, selectedDate);
+        request = request.input("endDate", sql.DateTime, nextDay);
+      } else if (from_date) {
+        // Date range filter - use date range for entire days
+        const fromDateObj = new Date(from_date);
+        const toDateObj = to_date ? new Date(to_date) : new Date(fromDateObj);
+        if (to_date) {
+          toDateObj.setDate(toDateObj.getDate() + 1); // Include to_date
+        } else {
+          toDateObj.setDate(fromDateObj.getDate() + 1); // Include from_date day
+        }
+
+        whereClause +=
+          " AND ttm.created_at >= @startDateRange AND ttm.created_at < @endDateRange";
+        request = request.input("startDateRange", sql.DateTime, fromDateObj);
+        request = request.input("endDateRange", sql.DateTime, toDateObj);
+      }
+
+      // First get transactions
+      const transactionResult = await request.query(`
+        SELECT
+          ttm.id,
+          CONVERT(DATE, ttm.created_at) as transaction_date,
+          ttm.vehicle_number,
+          ttm.transporter_name,
+          ttm.driver_name,
+          ttm.total_paid as advance_amount,
+          ttm.last_payment_mode as payment_mode,
+          ttm.last_payment_date,
+          ttm.gr_no,
+          ttm.request_id,
+          ttm.transporter_id,
+          tr.status as request_status,
+          u.name as customer_name,
+          tr.pickup_location,
+          tr.delivery_location,
+          ttm.created_at,
+          ttm.vehicle_payment_status,
+          ttm.remarks
+        FROM transport_transaction_master ttm
+        INNER JOIN transport_requests tr ON ttm.request_id = tr.id
+        INNER JOIN users u ON tr.customer_id = u.id
+        WHERE ttm.total_paid > 0 ${whereClause}
+        ORDER BY ttm.created_at DESC
+      `);
+
+      // Get container details for each transaction - use same approach as Admindashboard
+      const enhancedResults = [];
+
+      for (const transaction of transactionResult.recordset) {
+        try {
+          // Use the same transporter API approach as Admindashboard.jsx
+          const transporterDetails = await pool
+            .request()
+            .input("requestId", sql.Int, transaction.request_id || 0).query(`
+              SELECT * FROM transporter_details
+              WHERE request_id = @requestId
+            `);
+
+          const containers = transporterDetails.recordset.map((c) => ({
+            number: c.container_no,
+            type: c.container_type,
+            size: c.container_size,
+          }));
+
+          const vehicle_charges = transporterDetails.recordset.map((c) => ({
+            vehicle_number: c.vehicle_number,
+            container_no: c.container_no,
+            total_charge: parseFloat(c.total_charge || 0),
+            additional_charges: parseFloat(c.additional_charges || 0),
+            net_charge:
+              parseFloat(c.total_charge || 0) +
+              parseFloat(c.additional_charges || 0),
+          }));
+
+          const total_vehicle_charges = transporterDetails.recordset.reduce(
+            (sum, c) =>
+              sum +
+              parseFloat(c.total_charge || 0) +
+              parseFloat(c.additional_charges || 0),
+            0
+          );
+
+          enhancedResults.push({
+            ...transaction,
+            containers,
+            vehicle_charges,
+            total_vehicle_charges,
+          });
+        } catch (error) {
+          console.error(
+            "Error fetching container details for transaction:",
+            transaction.request_id,
+            error
+          );
+          enhancedResults.push({
+            ...transaction,
+            containers: [],
+            vehicle_charges: [],
+            total_vehicle_charges: 0,
+          });
+        }
+      }
+
+      const result = {
+        recordset: enhancedResults,
+      };
+
+      // Group by date for easier frontend processing
+      const dailyAdvances = {};
+      enhancedResults.forEach((transaction) => {
+        const dateKey = transaction.transaction_date
+          .toISOString()
+          .split("T")[0]; // YYYY-MM-DD format
+
+        if (!dailyAdvances[dateKey]) {
+          dailyAdvances[dateKey] = [];
+        }
+
+        dailyAdvances[dateKey].push({
+          id: transaction.id,
+          vehicle_number: transaction.vehicle_number,
+          transporter_name: transaction.transporter_name,
+          driver_name: transaction.driver_name,
+          advance_amount: parseFloat(transaction.advance_amount || 0),
+          payment_mode: transaction.payment_mode,
+          last_payment_date: transaction.last_payment_date,
+          gr_no: transaction.gr_no,
+          request_id: transaction.request_id,
+          customer_name: transaction.customer_name,
+          pickup_location: transaction.pickup_location,
+          delivery_location: transaction.delivery_location,
+          status: transaction.request_status,
+          created_at: transaction.created_at,
+          containers: transaction.containers,
+          vehicle_charges: transaction.vehicle_charges,
+          total_vehicle_charges: transaction.total_vehicle_charges,
+          vehicle_payment_status: transaction.vehicle_payment_status,
+          remarks: transaction.remarks,
+          neft_reference: extractNEFTReference(transaction.remarks),
+        });
+
+        function extractNEFTReference(remarks) {
+          if (!remarks) return null;
+          const neftMatch = remarks.match(/NEFT\/Ref:\s*([^;]+)/i);
+          return neftMatch ? neftMatch[1].trim() : null;
+        }
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: dailyAdvances,
+      });
+    } catch (error) {
+      console.error("Get daily advance payments error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error fetching daily advance payments",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+
+  // Update vehicle payment status for advance payments
+  static async updateVehiclePaymentStatus(req, res) {
+    try {
+      const { requestId } = req.params;
+      const requestIdInt = parseInt(requestId, 10);
+
+      if (isNaN(requestIdInt)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid request ID",
+        });
+      }
+
+      const {
+        vehicle_number,
+        payment_status,
+        payment_date,
+        notes,
+        neft_reference,
+      } = req.body;
+
+      if (!vehicle_number) {
+        return res.status(400).json({
+          success: false,
+          message: "Vehicle number is required",
+        });
+      }
+
+      // Check if vehicle payment status table exists, if not create it
+      // For now, since user mentioned creating new column, let's first check if a vehicle payment status column exists
+      const checkColumnResult = await pool.request().query(`
+        SELECT TOP 1 * FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = 'transport_transaction_master'
+        AND COLUMN_NAME = 'vehicle_payment_status'
+      `);
+
+      let columnExists = checkColumnResult.recordset.length > 0;
+
+      if (!columnExists) {
+        // Add the column if it doesn't exist
+        try {
+          // For Microsoft SQL Server, we need to alter the table to add the column
+          await pool.request().query(`
+            ALTER TABLE [fleet2].[dbo].[transport_transaction_master]
+            ADD vehicle_payment_status NVARCHAR(20) DEFAULT NULL
+          `);
+          columnExists = true;
+        } catch (error) {
+          console.error("Error creating vehicle_payment_status column:", error);
+          // Continue with JSON-based approach in transaction_remarks or similar
+          columnExists = false;
+        }
+      }
+
+      // Set notes text
+      let notesText =
+        notes ||
+        `Payment ${payment_status} for vehicle ${vehicle_number} on ${new Date().toLocaleDateString()}`;
+
+      console.log("Column exists check result:", columnExists);
+
+      // Add NEFT reference to notes if provided
+      if (neft_reference && neft_reference.trim() !== "") {
+        notesText += ` NEFT/Ref: ${neft_reference.trim()}`;
+      }
+
+      // Update the vehicle payment status
+      let result;
+
+      if (columnExists) {
+        console.log("Using column-based update");
+        result = await pool
+          .request()
+          .input("requestId", sql.Int, requestIdInt)
+          .input("vehicle_number", sql.VarChar(50), vehicle_number)
+          .input("payment_status", sql.VarChar(20), payment_status)
+          .input("notes", sql.VarChar(500), notesText).query(`
+            UPDATE transport_transaction_master
+            SET vehicle_payment_status = @payment_status,
+                remarks = ISNULL(remarks + '; ', '') + @notes,
+                updated_at = GETDATE()
+            WHERE request_id = @requestId AND vehicle_number = @vehicle_number
+          `);
+      } else {
+        // Use remarks field to store vehicle payment status as JSON with NEFT reference
+        const statusJson = JSON.stringify({
+          vehicle_number,
+          payment_status,
+          payment_date: payment_date || new Date().toISOString().split("T")[0],
+          updated_at: new Date().toISOString(),
+          notes: notes || "",
+          neft_reference: neft_reference || "",
+        });
+        result = await pool
+          .request()
+          .input("requestId", sql.Int, requestIdInt)
+          .input("vehicle_number", sql.VarChar(50), vehicle_number)
+          .input("statusJson", sql.VarChar(1000), statusJson)
+          .input("notes", sql.VarChar(500), notesText).query(`
+            UPDATE transport_transaction_master
+            SET remarks = ISNULL(remarks + '; ', '') + @notes + '; VEHICLE_PAYMENT_STATUS:' + @statusJson + ';',
+                updated_at = GETDATE()
+            WHERE request_id = @requestId AND vehicle_number = @vehicle_number
+          `);
+      }
+
+      if (result.rowsAffected && result.rowsAffected[0] === 0) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "No transaction found for the specified request ID and vehicle number",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Vehicle payment status updated to ${payment_status} successfully`,
+        data: {
+          request_id: requestIdInt,
+          vehicle_number,
+          payment_status,
+          updated_at: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error("Update vehicle payment status error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error updating vehicle payment status",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+
+  // Update vehicle payment status for a specific transaction
+  static async updateTransactionVehiclePaymentStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const transactionIdInt = parseInt(id, 10);
+
+      if (isNaN(transactionIdInt)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid transaction ID",
+        });
+      }
+
+      const { payment_status, neft_reference } = req.body;
+
+      if (!payment_status) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment status is required",
+        });
+      }
+
+      // Build remarks update if NEFT reference is provided
+      let remarksUpdate = "";
+      let request = pool
+        .request()
+        .input("id", sql.Int, transactionIdInt)
+        .input("payment_status", sql.VarChar(20), payment_status);
+
+      if (neft_reference && neft_reference.trim() !== "") {
+        // Add NEFT reference to remarks
+        const neftText = `NEFT/Ref: ${neft_reference.trim()}`;
+        request = request.input("neft_reference", sql.VarChar(100), neftText);
+        remarksUpdate =
+          ", remarks = ISNULL(remarks + '; ', '') + @neft_reference";
+      }
+
+      const result = await request.query(`
+        UPDATE transport_transaction_master
+        SET vehicle_payment_status = @payment_status${remarksUpdate},
+            updated_at = GETDATE()
+        WHERE id = @id
+      `);
+
+      if (result.rowsAffected && result.rowsAffected[0] === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No transaction found for the specified ID",
+        });
+      }
+
+      // Fetch the updated transaction to return it
+      const updatedTransaction = await TransactionModel.getTransactionById(
+        transactionIdInt
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: `Vehicle payment status updated to ${payment_status} successfully`,
+        data: updatedTransaction,
+      });
+    } catch (error) {
+      console.error("Update vehicle payment status error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Error updating vehicle payment status",
         error:
           process.env.NODE_ENV === "development" ? error.message : undefined,
       });

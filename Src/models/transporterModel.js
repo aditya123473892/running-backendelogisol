@@ -227,7 +227,9 @@ const transporterModel = {
           );
 
         if (vInfo.recordset.length === 0) {
-          console.warn(`Vehicle ${vc.vehicle_number} not found for request ${requestId}. Skipping.`);
+          console.warn(
+            `Vehicle ${vc.vehicle_number} not found for request ${requestId}. Skipping.`
+          );
           continue; // Skip to the next vehicle
         }
 
@@ -244,20 +246,41 @@ const transporterModel = {
 
           if (i === 0 && canUpdateFirstRow) {
             // First container, and the vehicle's row is empty, so UPDATE it
-            console.log(`Updating existing row ${firstRowId} for vehicle ${vc.vehicle_number}`);
+            console.log(
+              `Updating existing row ${firstRowId} for vehicle ${vc.vehicle_number}`
+            );
             result = await pool
               .request()
               .input("id", sql.Int, firstRowId)
-              .input("container_no", sql.NVarChar(100), container.container_no || null)
+              .input(
+                "container_no",
+                sql.NVarChar(100),
+                container.container_no || null
+              )
               .input("line", sql.NVarChar(100), container.line || null)
               .input("seal_no", sql.NVarChar(100), container.seal_no || null)
               .input("seal1", sql.NVarChar(100), container.seal1 || null)
               .input("seal2", sql.NVarChar(100), container.seal2 || null)
-              .input("container_total_weight", sql.Decimal(12, 2), container.container_total_weight || null)
-              .input("cargo_total_weight", sql.Decimal(12, 2), container.cargo_total_weight || null)
-              .input("container_type", sql.NVarChar(50), container.container_type || null)
-              .input("container_size", sql.NVarChar(20), container.container_size || null)
-              .query(`
+              .input(
+                "container_total_weight",
+                sql.Decimal(12, 2),
+                container.container_total_weight || null
+              )
+              .input(
+                "cargo_total_weight",
+                sql.Decimal(12, 2),
+                container.cargo_total_weight || null
+              )
+              .input(
+                "container_type",
+                sql.NVarChar(50),
+                container.container_type || null
+              )
+              .input(
+                "container_size",
+                sql.NVarChar(20),
+                container.container_size || null
+              ).query(`
                 UPDATE transporter_details
                 SET 
                   container_no = @container_no, line = @line, seal_no = @seal_no,
@@ -280,20 +303,47 @@ const transporterModel = {
               .input("vehicle_number", sql.NVarChar(50), vc.vehicle_number)
               .input("driver_name", sql.NVarChar(255), v.driver_name)
               .input("driver_contact", sql.NVarChar(20), v.driver_contact)
-              .input("additional_charges", sql.Decimal(12, 2), v.additional_charges)
-              .input("service_charges", sql.NVarChar(sql.MAX), v.service_charges)
+              .input(
+                "additional_charges",
+                sql.Decimal(12, 2),
+                v.additional_charges
+              )
+              .input(
+                "service_charges",
+                sql.NVarChar(sql.MAX),
+                v.service_charges
+              )
               .input("total_charge", sql.Decimal(12, 2), v.total_charge)
-              .input("container_no", sql.NVarChar(100), container.container_no || null)
+              .input(
+                "container_no",
+                sql.NVarChar(100),
+                container.container_no || null
+              )
               .input("line", sql.NVarChar(100), container.line || null)
               .input("seal_no", sql.NVarChar(100), container.seal_no || null)
               .input("seal1", sql.NVarChar(100), container.seal1 || null)
               .input("seal2", sql.NVarChar(100), container.seal2 || null)
-              .input("container_total_weight", sql.Decimal(12, 2), container.container_total_weight || null)
-              .input("cargo_total_weight", sql.Decimal(12, 2), container.cargo_total_weight || null)
-              .input("container_type", sql.NVarChar(50), container.container_type || null)
-              .input("container_size", sql.NVarChar(20), container.container_size || null)
-              .input("vehicle_sequence", sql.Int, sequence++)
-              .query(`
+              .input(
+                "container_total_weight",
+                sql.Decimal(12, 2),
+                container.container_total_weight || null
+              )
+              .input(
+                "cargo_total_weight",
+                sql.Decimal(12, 2),
+                container.cargo_total_weight || null
+              )
+              .input(
+                "container_type",
+                sql.NVarChar(50),
+                container.container_type || null
+              )
+              .input(
+                "container_size",
+                sql.NVarChar(20),
+                container.container_size || null
+              )
+              .input("vehicle_sequence", sql.Int, sequence++).query(`
                 INSERT INTO transporter_details (
                   request_id, transporter_name, vehicle_number, driver_name, driver_contact,
                   additional_charges, service_charges, total_charge, container_no, line,
@@ -309,7 +359,7 @@ const transporterModel = {
                 )
               `);
           }
-          
+
           if (result.recordset.length > 0) {
             containerResults.push({
               id: result.recordset[0].id,
