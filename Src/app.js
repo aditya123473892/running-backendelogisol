@@ -43,6 +43,7 @@ const locationRoutes = require("./routes/locationroutes"); // Import location ro
 const equipmentRoutes = require("./routes/equipmentRoutes"); // Import equipment routes
 const vehiicleRoutes = require("./routes/vehicleRoutes"); // Import vehicle routes
 const asnRoutes = require("./routes/asnRoutes"); // Import ASN routes
+const paymentReceiptRoutes = require("./routes/paymentReceiptRoutes"); // Import payment receipt routes
 // Mount routes with more specific routes first
 app.use("/api/auth", authRoutes);
 app.use("/api/users", UserRoutes);
@@ -58,6 +59,7 @@ app.use("/api/locations", locationRoutes);
 app.use("/api", equipmentRoutes);
 app.use("/api", vehiicleRoutes);
 app.use("/api", asnRoutes);
+app.use("/api/payment-receipts", paymentReceiptRoutes); // Payment receipts routes
 
 // Add route not found handler
 app.use((req, res, next) => {
